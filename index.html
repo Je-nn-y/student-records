@@ -173,6 +173,32 @@
   }
   .toast.show{opacity:1;}
   .hidden{display:none!important;}
+  /* 上课情况：与出勤表明显不同 —— 白底卡片格子 + 班级色左边条，更适合看长文字 */
+  .segbar button.multi-btn{flex:0 0 auto; background:#fff; color:var(--accent); border:1.5px solid var(--accent);}
+  .segbar button.multi-btn.on{background:var(--accent); color:#fff; border-color:transparent;}
+  .classnote-grid thead th{ background:var(--accent); }
+  .classnote-grid tbody.cn-P2 td.cell.cnote{ border-left:3px solid var(--blueD); }
+  .classnote-grid tbody.cn-L2 td.cell.cnote{ border-left:3px solid var(--greenD); }
+  .classnote-grid tbody.cn-P4 td.cell.cnote{ border-left:3px solid var(--yellowD); }
+  .classnote-grid tbody td.cell.cnote{
+    min-height:66px; height:auto; text-align:left; vertical-align:top; padding:9px 8px;
+    border:1px solid var(--line); background:#fff; box-shadow:none; cursor:pointer;
+  }
+  .classnote-grid tbody td.cell.cnote .cn{ display:block; font-size:12px; line-height:1.55; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
+  .classnote-grid tbody td.cell.cnote .cn-empty{ display:block; font-size:11px; color:var(--muted); }
+  .classnote-grid tbody td.cell.cnote.sel{ background:var(--accent)!important; border-color:var(--accent); }
+  .classnote-grid tbody td.cell.cnote.sel .cn, .classnote-grid tbody td.cell.cnote.sel .cn-empty{ color:#fff; }
+  .classnote-grid tbody tr.daterow td{ background:#F2F4F7; font-size:12px; font-weight:800; color:var(--ink); padding:6px; }
+  .cn-tag{ display:inline-block; padding:3px 12px; font-weight:800; font-size:13px; }
+  .cn-tag.cn-P2{ background:var(--blueD); color:#1f3a5f; }
+  .cn-tag.cn-L2{ background:var(--greenD); color:#1f4a36; }
+  .cn-tag.cn-P4{ background:var(--yellowD); color:#5a4a12; }
+  .multibar{position:fixed; left:0; right:0; bottom:84px; z-index:26; display:flex; gap:10px; padding:10px 14px; background:#fff; border-top:1px solid var(--line); box-shadow:0 -4px 12px rgba(0,0,0,.08); align-items:center;}
+  .multibar.hidden{display:none;}
+  .mb-count{flex:1; font-weight:800; color:var(--ink); font-size:14px;}
+  .mb-bulk{border:none; padding:11px 16px; font-weight:800; color:#fff; background:var(--accent); cursor:pointer;}
+  .mb-clear{border:1.5px solid var(--line); padding:11px 14px; font-weight:700; color:var(--muted); background:#fff; cursor:pointer;}
+  .field textarea#imp-text{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.6; }
 </style>
 </head>
 <body>
@@ -184,8 +210,9 @@
     </div>
   </div>
   <div class="segbar" id="views">
-    <button data-action="switch-view" data-view="attend">出勤表</button>
+    <button data-action="switch-view" data-view="attend" class="on">出勤表</button>
     <button data-action="switch-view" data-view="classnote">上课情况</button>
+    <button data-action="toggle-multi" class="multi-btn hidden" id="multiBtn">多选</button>
   </div>
   <div class="months" id="months"></div>
   <div class="tbl-wrap" id="tbl"></div>
@@ -194,6 +221,7 @@
     <button data-action="open-quick">写一笔</button>
     <button data-action="open-lesson">记一堂课</button>
   </div>
+  <div class="multibar hidden" id="multibar"></div>
 
   <div class="modal-mask hidden" id="modal"><div class="sheet" id="sheet"></div></div>
   <div class="pop-mask hidden" id="popMask">
@@ -241,7 +269,7 @@
       {studentId:"mujj6bmkstc4h",lesson:6,leave:true,makeupDate:null},
       {studentId:"mui73c51chrs0",lesson:7,leave:true,makeupDate:null}
     ];
-    var state={ students:[], classes:[], records:[], view:"attend", settings:{
+    var state={ students:[], classes:[], records:[], view:"attend", multi:false, sel:[], settings:{
       theme:"navy",
       lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
       classNotes:{},       // 上课情况笔记： "stuId|lesson" => "活泼松散，下节课要严格"
@@ -310,13 +338,18 @@
       '<span class="mcur">'+cnMonth(state.activeMonth)+'</span>'+
       '<button class="marr'+(nextM?"":" dis")+'" data-action="switch-month" data-m="'+nextM+'">›</button>';
     var seg=document.getElementById("views");
-    if(seg) seg.querySelectorAll("button").forEach(function(b){ b.classList.toggle("on", b.dataset.view===view); });
+    if(seg){
+      seg.querySelectorAll("button[data-view]").forEach(function(b){ b.classList.toggle("on", b.dataset.view===view); });
+      var mb=document.getElementById("multiBtn");
+      if(mb){ mb.classList.toggle("hidden", view!=="classnote"); mb.classList.toggle("on", !!state.multi); mb.textContent=state.multi?"完成":"多选"; }
+    }
     // 当月可见节次（所有班级去重排序）
     var visN={};
     Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ if(l.date.slice(0,7)===state.activeMonth) visN[l.n]=true; }); });
     var visLessons=Object.keys(visN).map(Number).sort(function(a,b){return a-b;});
     if(!state.students.length){
       document.getElementById("tbl").innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted);">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
+      renderMultibar();
       return;
     }
     if(view==="classnote"){ renderClassnote(visLessons); return; }
@@ -369,10 +402,11 @@
         '</div>';
     });
     document.getElementById("tbl").innerHTML=html;
+    renderMultibar();
   }
   function classNote(stuId,lesson){ var k=stuId+"|"+lesson; return (state.settings.classNotes&&state.settings.classNotes[k])||""; }
   function renderClassnote(visLessons){
-    var html='<table class="grid"><thead><tr><th class="corner"></th>';
+    var html='<table class="grid classnote-grid"><thead><tr><th class="corner"></th>';
     visLessons.forEach(function(n){ html+='<th><div class="ln">L'+n+'</div></th>'; });
     html+='</tr></thead>';
     classOrder().forEach(function(cid){
@@ -381,16 +415,18 @@
       var cname=className(cid);
       var cs=classSched(cid).filter(function(l){return l.date.slice(0,7)===state.activeMonth;});
       var dateOf={}; cs.forEach(function(l){ dateOf[l.n]=l.date; });
-      html+='<tbody class="band-'+cname+'">';
-      html+='<tr class="bandrow"><td colspan="'+(visLessons.length+1)+'"><span class="tag">'+esc(cname)+' 班</span></td></tr>';
+      html+='<tbody class="cn-band cn-'+cname+'">';
+      html+='<tr class="bandrow"><td colspan="'+(visLessons.length+1)+'"><span class="cn-tag cn-'+cname+'">'+esc(cname)+' 班</span></td></tr>';
       html+='<tr class="daterow"><td class="name">日期</td>';
-      visLessons.forEach(function(n){ html+='<td>'+(dateOf[n]?fmtMD(dateOf[n]):'')+'</td>'; });
+      visLessons.forEach(function(n){ html+='<td class="cn-date">'+(dateOf[n]?fmtMD(dateOf[n]):'')+'</td>'; });
       html+='</tr>';
       stus.forEach(function(s){
         html+='<tr><td class="name">'+esc(s.name)+'</td>';
         visLessons.forEach(function(n){
+          var key=s.id+"|"+n;
           var txt=classNote(s.id,n);
-          html+='<td class="cell cnote'+(txt?" has":"")+'" data-action="cnote" data-stu="'+s.id+'" data-lesson="'+n+'">'+(txt?'<span class="cn">'+esc(txt)+'</span>':'')+'</td>';
+          var sel=state.sel.indexOf(key)>=0?" sel":"";
+          html+='<td class="cell cnote'+sel+(txt?" has":"")+'" data-action="cnote" data-stu="'+s.id+'" data-lesson="'+n+'">'+(txt?'<span class="cn">'+esc(txt)+'</span>':'<span class="cn-empty">点此写</span>')+'</td>';
         });
         html+='</tr>';
       });
@@ -398,6 +434,32 @@
     });
     html+='</table>';
     document.getElementById("tbl").innerHTML=html;
+    renderMultibar();
+  }
+
+  function toggleSelect(stuId,lesson){
+    var k=stuId+"|"+lesson, i=state.sel.indexOf(k);
+    if(i>=0) state.sel.splice(i,1); else state.sel.push(k);
+    render();
+  }
+  function renderMultibar(){
+    var bar=document.getElementById("multibar");
+    if(state.view!=="classnote"||!state.multi){ bar.classList.add("hidden"); return; }
+    bar.classList.remove("hidden");
+    bar.innerHTML='<span class="mb-count">已选 '+state.sel.length+' 个</span>'+
+      '<button class="mb-bulk" data-act="mb-bulk">批量写</button>'+
+      '<button class="mb-clear" data-act="mb-clear">取消选择</button>';
+  }
+  function openBulkNote(){
+    if(!state.sel.length){ toast("先选几个格子"); return; }
+    var html='<h3>批量写（'+state.sel.length+' 个）</h3>'+
+      '<div class="sub">同一句话会写进所有选中的格子。</div>'+
+      '<div class="field"><label>这节课情况</label><textarea id="bulk-content" rows="5" placeholder="如：活泼松散，下节课要严格"></textarea></div>'+
+      '<div class="rc-btns">'+
+        '<button class="rc-makeup" data-act="bulk-save">写入这 '+state.sel.length+' 个</button>'+
+        '<button class="rc-clear" data-act="mb-clear">取消选择</button>'+
+      '</div>';
+    openModal(html);
   }
 
   var _cur=null, _curDate=null;
@@ -477,39 +539,81 @@
   }
   function closePop(){ document.getElementById("popMask").classList.add("hidden"); }
 
-  function doImport(){
-    var input=document.createElement("input"); input.type="file"; input.accept=".json,application/json";
-    input.onchange=function(){
-      var f=input.files[0]; if(!f) return;
-      var rd=new FileReader();
-      rd.onload=function(){
-        try{
-          var d=JSON.parse(rd.result);
-          if(Array.isArray(d.classes)) state.classes=d.classes.map(function(c){return {id:c.id,name:c.name||""};});
-          if(Array.isArray(d.students)) state.students=d.students.map(function(s,i){return {id:s.id||("s"+i+Math.random().toString(36).slice(2,6)), name:s.name||s, classId:s.classId||""};});
-          // 课程表使用内置 SCHED（按班级），不从导入覆盖
-          if(Array.isArray(d.entries)){
-            var recs=[];
-            d.entries.forEach(function(e){
-              if((e.type==="请假"||e.type==="补课") && e.lesson!=null){
-                var mk=null;
-                if(e.type==="补课") mk=e.date;
-                else if(e.status==="已补" && e.makeUpDate) mk=e.makeUpDate;
-                recs.push({studentId:e.studentId, lesson:Number(e.lesson), leave:true, makeupDate:mk});
-              }
-            });
-            state.records=recs;
-          }
-          save(); render(); toast("导入成功");
-        }catch(e){ toast("JSON 解析失败"); }
-        closePop();
-      };
-      rd.readAsText(f);
+  function openImport(){
+    var html='<h3>导入数据</h3>'+
+      '<div class="sub">两种方式都行：① 把导出的文字粘贴到下面；② 点“选文件”挑 JSON。导入会保留你的「上课情况」笔记。</div>'+
+      '<div class="field"><label>粘贴导出的文字（JSON）</label><textarea id="imp-text" rows="6" placeholder="在此粘贴导出的文字…"></textarea></div>'+
+      '<div class="rc-btns">'+
+        '<button class="rc-makeup" data-act="imp-file">选文件…</button>'+
+        '<button class="rc-leave" data-act="imp-go">导入</button>'+
+        '<button class="rc-clear" data-act="close-modal">取消</button>'+
+      '</div>';
+    openModal(html);
+  }
+  function importFromFile(f){
+    if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var ta=document.getElementById("imp-text"); if(ta) ta.value=rd.result;
+      parseImport(rd.result);
     };
-    input.click();
+    rd.readAsText(f);
+  }
+  function parseImport(text){
+    if(!text||!String(text).trim()){ toast("先粘贴文字或选文件"); return; }
+    var d;
+    try{ d=JSON.parse(text); }catch(e){ toast("文字不是合法 JSON，检查引号/括号"); return; }
+    if(!d||typeof d!=="object"){ toast("内容格式不对"); return; }
+    if(Array.isArray(d.students) && d.students.length){
+      state.students=d.students.map(function(s,i){return {id:s.id||("s"+i+Math.random().toString(36).slice(2,6)), name:s.name||(typeof s==="string"?s:""), classId:s.classId||""};});
+    }
+    if(Array.isArray(d.classes) && d.classes.length){
+      state.classes=d.classes.map(function(c){return {id:c.id,name:c.name||""};});
+    }
+    if(Array.isArray(d.records)){
+      state.records=d.records.filter(function(r){return r&&r.studentId!=null&&r.lesson!=null;}).map(function(r){return {studentId:r.studentId,lesson:Number(r.lesson),leave:r.leave!==false,makeupDate:r.makeupDate||null,note:r.note||null};});
+    } else if(Array.isArray(d.entries)){
+      var recs=[];
+      d.entries.forEach(function(e){
+        if((e.type==="请假"||e.type==="补课")&&e.studentId&&e.lesson!=null&&e.lesson!==""){
+          var mk=null;
+          if(e.type==="补课") mk=e.date||e.makeUpDate||null;
+          else if(e.status==="已补"&&e.makeUpDate) mk=e.makeUpDate;
+          recs.push({studentId:e.studentId,lesson:Number(e.lesson),leave:true,makeupDate:mk,note:e.note||null});
+        }
+      });
+      state.records=recs;
+    }
+    // 上课情况笔记：吸收 当前 classNotes / settings.classNotes / 旧 entries(type=上课)
+    var cn={};
+    function addCN(k,v){ if(k&&v!=null&&String(v).trim()) cn[k]=String(v).trim(); }
+    if(d.classNotes&&typeof d.classNotes==="object"){ Object.keys(d.classNotes).forEach(function(k){ addCN(k,d.classNotes[k]); }); }
+    if(d.settings&&d.settings.classNotes&&typeof d.settings.classNotes==="object"){ Object.keys(d.settings.classNotes).forEach(function(k){ addCN(k,d.settings.classNotes[k]); }); }
+    if(Array.isArray(d.entries)){
+      d.entries.forEach(function(e){
+        if(e.type==="上课"&&e.studentId&&e.lesson!=null&&e.lesson!==""){ addCN(e.studentId+"|"+e.lesson, e.note||e.content||e.text||e.detail||e.remark||e.desc||""); }
+      });
+    }
+    if(Object.keys(cn).length) state.settings.classNotes=cn;
+    // 顺手把其它用户数据也吸收（避免导出再导入丢内容）
+    if(d.settings){
+      if(d.settings.lessonNotes&&typeof d.settings.lessonNotes==="object") state.settings.lessonNotes=d.settings.lessonNotes;
+      if(d.settings.progressNotes&&typeof d.settings.progressNotes==="object") state.settings.progressNotes=d.settings.progressNotes;
+      if(d.settings.theme) state.settings.theme=d.settings.theme;
+    }
+    if(d.lessonNotes&&typeof d.lessonNotes==="object") state.settings.lessonNotes=d.lessonNotes;
+    if(d.progressNotes&&typeof d.progressNotes==="object") state.settings.progressNotes=d.progressNotes;
+    save(); render(); closeModal(); closePop();
+    toast("导入成功（上课情况已保留）");
   }
   function doExport(){
-    var blob=new Blob([JSON.stringify({students:state.students,classes:state.classes,records:state.records,classNotes:state.settings.classNotes},null,2)],{type:"application/json"});
+    var blob=new Blob([JSON.stringify({
+      students:state.students, classes:state.classes, records:state.records,
+      classNotes:state.settings.classNotes||{},
+      lessonNotes:state.settings.lessonNotes||{},
+      progressNotes:state.settings.progressNotes||{},
+      theme:state.settings.theme||"navy"
+    },null,2)],{type:"application/json"});
     var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="student-records.json"; a.click();
     toast("已导出"); closePop();
   }
@@ -521,13 +625,14 @@
       var a=el.dataset.action;
       if(a==="open-theme"){ cycleTheme(); }
       else if(a==="open-settings"){ openSettings(); }
-      else if(a==="switch-view"){ state.view=el.dataset.view; render(); }
+      else if(a==="switch-view"){ state.view=el.dataset.view; state.multi=false; state.sel=[]; render(); }
+      else if(a==="toggle-multi"){ state.multi=!state.multi; if(!state.multi) state.sel=[]; render(); }
       else if(a==="switch-month"){ if(!el.dataset.m) return; state.activeMonth=el.dataset.m; render(); }
       else if(a==="cell"){ openCell(el.dataset.stu, el.dataset.lesson); }
-      else if(a==="cnote"){ openClassNote(el.dataset.stu, el.dataset.lesson); }
+      else if(a==="cnote"){ if(state.multi){ toggleSelect(el.dataset.stu, el.dataset.lesson); } else { openClassNote(el.dataset.stu, el.dataset.lesson); } }
       else if(a==="date"){ openDate(el.dataset.cid, el.dataset.lesson); }
       else if(a==="open-quick"){ openQuick(); }
-      else if(a==="open-lesson"){ toast("上课记录暂未开放，先把请假/补课做好"); }
+      else if(a==="open-lesson"){ state.view="classnote"; state.multi=false; state.sel=[]; render(); toast("在「上课情况」点格子写"); }
       else if(a==="close-modal"){ closeModal(); }
       return;
     }
@@ -540,13 +645,18 @@
       else if(act==="dt-clear"){ if(_curDate){ var dk2=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(state.settings.lessonNotes) delete state.settings.lessonNotes[dk2]; save(); render(); closeModal(); } }
       else if(act==="cn-save"){ var cta=document.getElementById("cn-content"); if(_cur){ var ck=_cur.stu+"|"+_cur.lesson; if(!state.settings.classNotes) state.settings.classNotes={}; state.settings.classNotes[ck]=cta?cta.value.trim():""; save(); render(); closeModal(); } }
       else if(act==="cn-clear"){ if(_cur){ var ck2=_cur.stu+"|"+_cur.lesson; if(state.settings.classNotes) delete state.settings.classNotes[ck2]; save(); render(); closeModal(); } }
+      else if(act==="imp-file"){ var fi=document.createElement("input"); fi.type="file"; fi.accept=".json,application/json"; fi.onchange=function(){ if(fi.files[0]) importFromFile(fi.files[0]); }; fi.click(); }
+      else if(act==="imp-go"){ var it=document.getElementById("imp-text"); parseImport(it?it.value:""); }
+      else if(act==="mb-bulk"){ openBulkNote(); }
+      else if(act==="bulk-save"){ var bc=document.getElementById("bulk-content"); var v=bc?bc.value.trim():""; state.sel.forEach(function(k){ if(!state.settings.classNotes) state.settings.classNotes={}; state.settings.classNotes[k]=v; }); state.sel=[]; state.multi=false; save(); render(); closeModal(); toast("已写入"); }
+      else if(act==="mb-clear"){ state.sel=[]; render(); }
       else if(act==="qk-leave"||act==="qk-makeup"){
         var ps=document.querySelector("#qk-pick .chip.on"), pl=document.querySelector("#qk-less .chip.on");
         if(!ps||!pl){ toast("先选学生和节次"); return; }
         upsertRec(ps.dataset.pick, pl.dataset.less, true, act==="qk-makeup"?(document.getElementById("rc-date")?document.getElementById("rc-date").value:today()):null);
         closeModal();
       }
-      else if(act==="set-import"){ doImport(); }
+      else if(act==="set-import"){ openImport(); }
       else if(act==="set-export"){ doExport(); }
       else if(act==="set-recycle"){ toast("回收站（后续做）"); }
       else if(act==="set-sync"){ toast("同步（后续做）"); }
