@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="navy">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>学生记录</title>
+<style>
+  :root{
+    --bg:#F6F9FD; --card:#FFFFFF; --ink:#2E3440; --muted:#7C8694;
+    --accent:#2F6DB5; --accent2:#2F6DB5; --line:#DCE4EC;
+    --blue:#D8E8FA; --green:#DAF0E6; --yellow:#FBF1D2;
+    --blueD:#C2D8F2; --greenD:#C4E6D5; --yellowD:#F2E4B8;
+    --x:#D6453E; --mk:#2E8B5E;
+  }
+  html[data-theme="teal"]{
+    --bg:#F3F7F5; --card:#FFFFFF; --ink:#343E3A; --muted:#87958E;
+    --accent:#2E8B6F; --accent2:#2E8B6F; --line:#E0EAE4;
+  }
+  html[data-theme="slate"]{
+    --bg:#F5F6F7; --card:#FFFFFF; --ink:#3A3F45; --muted:#8B9099;
+    --accent:#5A6470; --accent2:#5A6470; --line:#E6E8EB;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.5;
+    padding-bottom:96px;
+  }
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px;
+    background:var(--accent);
+    color:#fff; box-shadow:0 2px 10px rgba(0,0,0,.08);
+  }
+  .topbar h1{font-size:17px; margin:0; font-weight:700; letter-spacing:.5px;}
+  .theme-ico{
+    width:36px; height:36px; border-radius:0; border:none; cursor:pointer;
+    background:rgba(255,255,255,.25); color:#fff; font-size:18px; line-height:36px;
+  }
+  .months{
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    padding:12px 12px 6px;
+    position:sticky; top:102px; z-index:15; background:var(--bg);
+  }
+  .segbar{
+    position:sticky; top:50px; z-index:16; display:flex; gap:8px;
+    padding:7px 12px; background:var(--bg); border-bottom:1px solid var(--line);
+  }
+  .segbar button{
+    flex:1; border:1.5px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:0; padding:9px; font-size:14px; font-weight:800; cursor:pointer;
+  }
+  .segbar button.on{ background:var(--accent); color:#fff; border-color:transparent; }
+  .grid tbody td.cell.cnote{ height:auto; min-height:48px; vertical-align:top; text-align:left; padding:8px 6px; }
+  .cnote .cn{ display:block; font-size:11px; font-weight:600; color:var(--ink); line-height:1.55; }
+  .marr{
+    width:40px; height:40px; border-radius:0; border:none; cursor:pointer;
+    background:var(--card); color:var(--accent2); font-size:22px; font-weight:700; line-height:40px;
+    box-shadow:0 1px 5px rgba(0,0,0,.06);
+  }
+  .marr.dis{ color:var(--line); background:var(--bg); box-shadow:none; cursor:default; }
+  .mcur{ font-size:16px; font-weight:800; color:var(--ink); min-width:64px; text-align:center; }
+  .tbl-wrap{overflow-x:auto; padding:6px 10px 12px; -webkit-overflow-scrolling:touch;}
+  table.grid{border-collapse:separate; border-spacing:0; min-width:100%; table-layout:fixed;}
+  table.grid th, table.grid td{
+    background:var(--card); text-align:center; vertical-align:middle;
+    padding:10px 6px; border:none;
+  }
+  table.grid thead th{
+    background:var(--accent); color:#fff;
+    font-weight:700; min-width:110px; padding:10px 6px;
+  }
+  th .ln{font-size:14px; font-weight:800;}
+  th .ld{font-size:10px; opacity:.85; font-weight:600; margin-top:1px;}
+  th.corner, td.name{
+    min-width:64px; max-width:64px; width:64px;
+    font-size:13px; color:var(--ink); font-weight:700;
+  }
+  td.name{box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);}
+  tr.band td{
+    text-align:left; padding:9px 12px; font-weight:800;
+    font-size:14px; color:var(--ink);
+  }
+  tr.band .tag{padding:3px 12px; border-radius:0;}
+  td.cell{
+    height:50px; cursor:pointer; transition:transform .05s;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+  }
+  td.cell:active{transform:scale(.96);}
+  .x{display:block; color:var(--x); font-size:22px; font-weight:900; line-height:1;}
+  .mk{display:block; color:var(--mk); font-size:11px; font-weight:800; margin-top:2px;}
+  .note{display:block; color:var(--ink); font-size:10px; font-weight:700; margin-top:2px;}
+  /* 每个班级不同柔和底色：P2浅蓝 / L2浅绿 / P4浅黄，日期行也随班上色 */
+  .grid tbody.band-P2{background:var(--blue);}
+  .grid tbody.band-L2{background:var(--green);}
+  .grid tbody.band-P4{background:var(--yellow);}
+  .grid tbody.band-P2 td.cell, .grid tbody.band-P2 td.name{background:var(--blue);}
+  .grid tbody.band-L2 td.cell, .grid tbody.band-L2 td.name{background:var(--green);}
+  .grid tbody.band-P4 td.cell, .grid tbody.band-P4 td.name{background:var(--yellow);}
+  .grid tbody.band-P2 tr.bandrow td{background:var(--blueD);}
+  .grid tbody.band-L2 tr.bandrow td{background:var(--greenD);}
+  .grid tbody.band-P4 tr.bandrow td{background:var(--yellowD);}
+  .grid tbody td.cell.has{box-shadow:inset 0 0 0 2px rgba(0,0,0,.14);}
+  .grid tbody tr.daterow td{ background:transparent; font-size:12px; font-weight:800; color:var(--ink); padding:7px 6px; border-top:2px solid rgba(0,0,0,.16); }
+  td.datecell{ cursor:pointer; padding:7px 6px; }
+  td.datecell:active{ transform:scale(.97); }
+  td.datecell .dd{ font-size:12px; font-weight:800; color:var(--ink); }
+  td.datecell .dc{ font-size:10px; font-weight:600; color:var(--muted); line-height:1.35; margin-top:3px; }
+  /* 表格正下方：每班一个可编辑进度备注卡片（不进任何格子） */
+  .pnote{ margin:14px 10px 4px; border:2px solid var(--line); padding:12px 14px; }
+  .pnote-P2{ background:var(--blue); border-color:var(--blueD); }
+  .pnote-L2{ background:var(--green); border-color:var(--greenD); }
+  .pnote-P4{ background:var(--yellow); border-color:var(--yellowD); }
+  .pnote-h{ font-weight:800; font-size:13px; color:var(--ink); margin-bottom:8px; }
+  .pnote-area{ width:100%; min-height:66px; border:1.5px solid var(--line); border-radius:0; padding:10px;
+    font-size:13px; line-height:1.8; font-family:inherit; color:var(--ink); background:#fff; resize:vertical; }
+  .bottombar{
+    position:fixed; left:0; right:0; bottom:0; z-index:25;
+    display:flex; gap:10px; padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:var(--bg); border-top:1px solid var(--line);
+  }
+  .bottombar button{
+    flex:1; border:none; border-radius:0; padding:14px; font-size:15px; font-weight:800;
+    color:#fff; cursor:pointer; background:var(--accent);
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+  }
+  .bottombar button:active{transform:scale(.97);}
+  .modal-mask{
+    position:fixed; inset:0; z-index:50; background:rgba(40,30,50,.45);
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .modal-mask.hidden{display:none;}
+  .sheet{
+    width:100%; max-width:460px; background:var(--card); border-radius:0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom)); animation:up .18s ease;
+  }
+  @keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0)}}
+  .sheet h3{margin:0 0 4px; font-size:18px;}
+  .sheet .sub{color:var(--muted); font-size:12px; margin-bottom:12px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600;}
+  .field input, .field select, .field textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:0; padding:10px;
+    font-size:14px; background:#fff; color:var(--ink); font-family:inherit;
+  }
+  .rc-btns{display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+  .rc-btns button{
+    border:none; border-radius:0; padding:13px; font-size:15px; font-weight:800; cursor:pointer; color:#fff;
+  }
+  .rc-leave{background:#FF4D6D;}
+  .rc-makeup{background:#0EA371;}
+  .rc-clear{background:#EFE7F2; color:var(--muted);}
+  .chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .chip{
+    border:1.5px solid var(--line); background:#fff; border-radius:0; padding:8px 12px;
+    font-size:13px; cursor:pointer; color:var(--ink); font-weight:600;
+  }
+  .chip.on{background:var(--accent); color:#fff; border-color:transparent;}
+  .top-actions{display:flex; gap:8px;}
+  .pop-mask{position:fixed; inset:0; z-index:60; background:rgba(40,30,50,.22);}
+  .pop-mask.hidden{display:none;}
+  .pop{position:fixed; top:58px; right:10px; width:230px; background:var(--card); box-shadow:0 10px 30px rgba(0,0,0,.22); padding:16px;}
+  .pop.hidden{display:none;}
+  .menu h4{margin:0 0 10px; font-size:13px; color:var(--muted);}
+  .menu-row{display:flex; align-items:center; justify-content:space-between; padding:12px 4px; border-top:1px solid var(--line); cursor:pointer; font-weight:600;}
+  .menu-row:active{opacity:.6;}
+  .toast{
+    position:fixed; left:50%; bottom:110px; transform:translateX(-50%); z-index:80;
+    background:rgba(40,30,50,.9); color:#fff; padding:10px 18px; border-radius:0; font-size:13px;
+    opacity:0; transition:opacity .2s; pointer-events:none;
+  }
+  .toast.show{opacity:1;}
+  .hidden{display:none!important;}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>学生记录</h1>
+    <div class="top-actions">
+      <button class="theme-ico" data-action="open-theme" title="换颜色（点一下切换）">◐</button>
+      <button class="theme-ico" data-action="open-settings" title="设置">⚙</button>
+    </div>
+  </div>
+  <div class="segbar" id="views">
+    <button data-action="switch-view" data-view="attend">出勤表</button>
+    <button data-action="switch-view" data-view="classnote">上课情况</button>
+  </div>
+  <div class="months" id="months"></div>
+  <div class="tbl-wrap" id="tbl"></div>
+
+  <div class="bottombar">
+    <button data-action="open-quick">写一笔</button>
+    <button data-action="open-lesson">记一堂课</button>
+  </div>
+
+  <div class="modal-mask hidden" id="modal"><div class="sheet" id="sheet"></div></div>
+  <div class="pop-mask hidden" id="popMask">
+    <div class="pop hidden" id="menu"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  (function(){
+    "use strict";
+    var KEY_STU="sr_students_v2", KEY_REC="sr_records_v2", KEY_SET="sr_settings_v2";
+    // 每班各自的课表（按班级名小写）；P2=周六班 / L2=周日班 / P4=周日班(国庆调到1-3号)
+    var SCHED={
+      "p2":[{n:1,date:"2026-09-05"},{n:2,date:"2026-09-12"},{n:3,date:"2026-09-19"},{n:4,date:"2026-09-26"},{n:5,date:"2026-10-04"},{n:6,date:"2026-10-05"},{n:7,date:"2026-10-06"}],
+      "l2":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-05"},{n:6,date:"2026-10-06"},{n:7,date:"2026-10-07"}],
+      "p4":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-01"},{n:6,date:"2026-10-02"},{n:7,date:"2026-10-03"}]
+    };
+    // 真实默认数据（localStorage 为空时启用；之后可用右上角导入更新）
+    var DEFAULT_CLS=[{id:"mui56z4rfd6x3",name:"p2"},{id:"mui647cm6z7xc",name:"p4"},{id:"muji4o127puo0",name:"l2"}];
+    var DEFAULT_STU=[
+      {id:"mui5amxt6b271",name:"王琰玘",classId:"mui56z4rfd6x3"},
+      {id:"mui69ry8inj7k",name:"李明昊",classId:"mui647cm6z7xc"},
+      {id:"mui73c51chrs0",name:"刘宇涵",classId:"mui647cm6z7xc"},
+      {id:"muji4w9yjj5qj",name:"黄奕安",classId:"muji4o127puo0"},
+      {id:"muji4w9yc9uu2",name:"梁汝欢",classId:"muji4o127puo0"},
+      {id:"mujj6bmkstc4h",name:"林颂渊",classId:"mui647cm6z7xc"},
+      {id:"mujm0g2ttftny",name:"任妍语",classId:"mui647cm6z7xc"}
+    ];
+    var DEFAULT_REC=[
+      // P2 王琰玘
+      {studentId:"mui5amxt6b271",lesson:7,leave:true,makeupDate:null,note:"复习A和E"},
+      // L2 黄奕安
+      {studentId:"muji4w9yjj5qj",lesson:3,leave:true,makeupDate:null},
+      {studentId:"muji4w9yjj5qj",lesson:4,leave:true,makeupDate:null},
+      // L2 梁汝欢（仅在 9.25 / 9.27 / 10.5 / 10.6 画红叉）
+      {studentId:"muji4w9yc9uu2",lesson:3,leave:true,makeupDate:null},
+      {studentId:"muji4w9yc9uu2",lesson:4,leave:true,makeupDate:null},
+      {studentId:"muji4w9yc9uu2",lesson:5,leave:true,makeupDate:null},
+      {studentId:"muji4w9yc9uu2",lesson:6,leave:true,makeupDate:null},
+      // P4 保留原有真实记录
+      {studentId:"mui69ry8inj7k",lesson:1,leave:true,makeupDate:"2026-09-25"},
+      {studentId:"mui69ry8inj7k",lesson:2,leave:true,makeupDate:null},
+      {studentId:"mui69ry8inj7k",lesson:7,leave:true,makeupDate:null},
+      {studentId:"mujj6bmkstc4h",lesson:5,leave:true,makeupDate:null},
+      {studentId:"mujj6bmkstc4h",lesson:6,leave:true,makeupDate:null},
+      {studentId:"mui73c51chrs0",lesson:7,leave:true,makeupDate:null}
+    ];
+    var state={ students:[], classes:[], records:[], view:"attend", settings:{
+      theme:"navy",
+      lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
+      classNotes:{},       // 上课情况笔记： "stuId|lesson" => "活泼松散，下节课要严格"
+      progressNotes:{      // 每班进度备注（可自己改）
+        l2:"L2班整体进度较其他班慢2节课（缺9.25、9.27内容）。安安缺2节，进度正好；欢欢额外缺10.5、10.6，共缺4节，比安安多落后2节。"
+      }
+    }, activeMonth:null };
+
+  function load(){
+    try{
+      var s=JSON.parse(localStorage.getItem(KEY_STU)); if(Array.isArray(s)) state.students=s;
+      var r=JSON.parse(localStorage.getItem(KEY_REC)); if(Array.isArray(r)) state.records=r;
+      var t=JSON.parse(localStorage.getItem(KEY_SET)); if(t&&typeof t==="object") state.settings=Object.assign(state.settings,t);
+    }catch(e){}
+  }
+  function save(){
+    try{
+      localStorage.setItem(KEY_STU,JSON.stringify(state.students));
+      localStorage.setItem(KEY_REC,JSON.stringify(state.records));
+      localStorage.setItem(KEY_SET,JSON.stringify(state.settings));
+    }catch(e){}
+  }
+  function today(){ var d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function pad(n){ return (n<10?"0":"")+n; }
+  function fmtMD(s){ var p=String(s).split("-"); if(p.length<3) return s; return (p[1].replace(/^0/,"")+"."+p[2].replace(/^0/,"")); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+  function stuById(id){ return state.students.find(function(s){return s.id===id;}); }
+  function classSched(cid){ var c=classMap()[cid]; var nm=c?(c.name||"").toLowerCase():""; return SCHED[nm]||[]; }
+  function lesById(cid,n){ var arr=classSched(cid); return arr.find(function(l){return l.n===Number(n);}); }
+  function getRec(stuId,lesson){ return state.records.find(function(r){return r.studentId===stuId && r.lesson===Number(lesson);}); }
+  function lessonContent(cid,n){ var k=(className(cid)||"").toLowerCase()+"|"+n; return (state.settings.lessonNotes&&state.settings.lessonNotes[k])||""; }
+  function upsertRec(stuId,lesson,leave,makeupDate,note){
+    state.records=state.records.filter(function(r){return !(r.studentId===stuId && r.lesson===Number(lesson));});
+    if(leave) state.records.push({studentId:stuId, lesson:Number(lesson), leave:true, makeupDate:makeupDate||null, note:note||null});
+    save(); render();
+  }
+  function classMap(){ var m={}; state.classes.forEach(function(c){m[c.id]=c;}); return m; }
+    var CLASS_PREF=["p2","l2","p4"];
+    function classOrder(){
+      var prefIds=CLASS_PREF.map(function(n){return state.classes.find(function(c){return (c.name||"").toLowerCase()===n;});}).filter(Boolean).map(function(c){return c.id;});
+      var rest=state.classes.map(function(c){return c.id;}).filter(function(id){return prefIds.indexOf(id)<0;});
+      return prefIds.concat(rest);
+    }
+    function className(id){ var c=classMap()[id]; return c?(c.name||"").toUpperCase():"?"; }
+    function seedDefault(){
+      state.students=DEFAULT_STU.slice();
+      state.classes=DEFAULT_CLS.slice();
+      state.records=DEFAULT_REC.slice();
+    }
+    function months(){
+      var set={};
+      Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ set[l.date.slice(0,7)]=true; }); });
+      return Object.keys(set).sort();
+    }
+  function cnMonth(ym){ var p=ym.split("-"); return Number(p[1])+"月"; }
+
+  function render(){
+    document.documentElement.setAttribute("data-theme", state.settings.theme||"navy");
+    var view=state.view||"attend";
+    var ms=months();
+    if(!state.activeMonth || ms.indexOf(state.activeMonth)<0) state.activeMonth=ms[0]||today().slice(0,7);
+    var mh=document.getElementById("months");
+    var idx=ms.indexOf(state.activeMonth);
+    var prevM = idx>0 ? ms[idx-1] : "", nextM = idx<ms.length-1 ? ms[idx+1] : "";
+    mh.innerHTML='<button class="marr'+(prevM?"":" dis")+'" data-action="switch-month" data-m="'+prevM+'">‹</button>'+
+      '<span class="mcur">'+cnMonth(state.activeMonth)+'</span>'+
+      '<button class="marr'+(nextM?"":" dis")+'" data-action="switch-month" data-m="'+nextM+'">›</button>';
+    var seg=document.getElementById("views");
+    if(seg) seg.querySelectorAll("button").forEach(function(b){ b.classList.toggle("on", b.dataset.view===view); });
+    // 当月可见节次（所有班级去重排序）
+    var visN={};
+    Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ if(l.date.slice(0,7)===state.activeMonth) visN[l.n]=true; }); });
+    var visLessons=Object.keys(visN).map(Number).sort(function(a,b){return a-b;});
+    if(!state.students.length){
+      document.getElementById("tbl").innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted);">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
+      return;
+    }
+    if(view==="classnote"){ renderClassnote(visLessons); return; }
+    // —— 出勤表视图 ——
+    var html='<table class="grid"><thead><tr><th class="corner"></th>';
+    visLessons.forEach(function(n){ html+='<th><div class="ln">L'+n+'</div></th>'; });
+    html+='</tr></thead>';
+    classOrder().forEach(function(cid){
+      var stus=state.students.filter(function(s){return s.classId===cid;});
+      if(!stus.length) return;
+      var cname=className(cid);
+      var cs=classSched(cid).filter(function(l){return l.date.slice(0,7)===state.activeMonth;});
+      var dateOf={}; cs.forEach(function(l){ dateOf[l.n]=l.date; });
+      html+='<tbody class="band-'+cname+'">';
+      html+='<tr class="bandrow"><td colspan="'+(visLessons.length+1)+'"><span class="tag">'+esc(cname)+' 班</span></td></tr>';
+      html+='<tr class="daterow"><td class="name">日期</td>';
+      visLessons.forEach(function(n){
+        var dt=dateOf[n]?fmtMD(dateOf[n]):'';
+        var lc=lessonContent(cid,n);
+        html+='<td class="datecell" data-action="date" data-cid="'+cid+'" data-lesson="'+n+'">';
+        html+='<div class="dd">'+dt+'</div>';
+        if(lc) html+='<div class="dc">'+esc(lc)+'</div>';
+        html+='</td>';
+      });
+      html+='</tr>';
+      stus.forEach(function(s){
+        html+='<tr><td class="name">'+esc(s.name)+'</td>';
+        visLessons.forEach(function(n){
+          var rec=getRec(s.id,n);
+          var inner="";
+          if(rec){
+            inner='<span class="x">✕</span>';
+            if(rec.makeupDate) inner+='<span class="mk">'+fmtMD(rec.makeupDate)+'已补</span>';
+            if(rec.note) inner+='<span class="note">'+esc(rec.note)+'</span>';
+          }
+          html+='<td class="cell'+(rec?" has":"")+'" data-action="cell" data-stu="'+s.id+'" data-lesson="'+n+'">'+inner+'</td>';
+        });
+        html+='</tr>';
+      });
+      html+='</tbody>';
+    });
+    html+='</table>';
+    // 每个班级一个可编辑进度备注卡片（表格正下方，独立、绝不进任何格子）
+    classOrder().forEach(function(cid){
+      var cname=className(cid); var key=(cname||"").toLowerCase();
+      var val=(state.settings.progressNotes&&state.settings.progressNotes[key])||"";
+      html+='<div class="pnote pnote-'+cname+'">'+
+        '<div class="pnote-h">'+esc(cname)+' 班进度备注</div>'+
+        '<textarea class="pnote-area" data-pn="'+key+'" placeholder="写点班级进度…">'+esc(val)+'</textarea>'+
+        '</div>';
+    });
+    document.getElementById("tbl").innerHTML=html;
+  }
+  function classNote(stuId,lesson){ var k=stuId+"|"+lesson; return (state.settings.classNotes&&state.settings.classNotes[k])||""; }
+  function renderClassnote(visLessons){
+    var html='<table class="grid"><thead><tr><th class="corner"></th>';
+    visLessons.forEach(function(n){ html+='<th><div class="ln">L'+n+'</div></th>'; });
+    html+='</tr></thead>';
+    classOrder().forEach(function(cid){
+      var stus=state.students.filter(function(s){return s.classId===cid;});
+      if(!stus.length) return;
+      var cname=className(cid);
+      var cs=classSched(cid).filter(function(l){return l.date.slice(0,7)===state.activeMonth;});
+      var dateOf={}; cs.forEach(function(l){ dateOf[l.n]=l.date; });
+      html+='<tbody class="band-'+cname+'">';
+      html+='<tr class="bandrow"><td colspan="'+(visLessons.length+1)+'"><span class="tag">'+esc(cname)+' 班</span></td></tr>';
+      html+='<tr class="daterow"><td class="name">日期</td>';
+      visLessons.forEach(function(n){ html+='<td>'+(dateOf[n]?fmtMD(dateOf[n]):'')+'</td>'; });
+      html+='</tr>';
+      stus.forEach(function(s){
+        html+='<tr><td class="name">'+esc(s.name)+'</td>';
+        visLessons.forEach(function(n){
+          var txt=classNote(s.id,n);
+          html+='<td class="cell cnote'+(txt?" has":"")+'" data-action="cnote" data-stu="'+s.id+'" data-lesson="'+n+'">'+(txt?'<span class="cn">'+esc(txt)+'</span>':'')+'</td>';
+        });
+        html+='</tr>';
+      });
+      html+='</tbody>';
+    });
+    html+='</table>';
+    document.getElementById("tbl").innerHTML=html;
+  }
+
+  var _cur=null, _curDate=null;
+  function openCell(stuId,lesson){
+    _cur={stu:stuId,lesson:lesson};
+    var stu=stuById(stuId), cid=stu?stu.classId:null, les=lesById(cid,lesson), rec=getRec(stuId,lesson);
+    var html='<h3>'+esc(stu?stu.name:"")+' · 第'+lesson+'节</h3>'+
+      (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
+      '<div class="field"><label>补课日期（标“已补”用，默认今天）</label><input type="date" id="rc-date" value="'+today()+'"></div>'+
+      '<div class="field"><label>格子小字备注（可选，如：复习A和E）</label><input type="text" id="rc-note" value="'+esc(rec?rec.note||'':'')+'" placeholder="复习A和E"></div>'+
+      '<div class="rc-btns">'+
+        '<button class="rc-leave" data-act="rc-leave">标记请假（红叉）</button>'+
+        '<button class="rc-makeup" data-act="rc-makeup">标记已补课（绿字）</button>'+
+        (rec?'<button class="rc-clear" data-act="rc-clear">清除这一格</button>':'')+
+      '</div>';
+    openModal(html);
+  }
+
+  function openDate(cid,lesson){
+    _curDate={cid:cid,lesson:lesson};
+    var les=lesById(cid,lesson), cur=lessonContent(cid,lesson);
+    var html='<h3>'+esc(className(cid))+' 班 · 第'+lesson+'节</h3>'+
+      (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
+      '<div class="field"><label>当天上的课（写简短，如：复习A和E）</label><textarea id="dt-content" rows="3" placeholder="复习A和E / 字母组合 oi,oy…">'+esc(cur)+'</textarea></div>'+
+      '<div class="rc-btns">'+
+        '<button class="rc-makeup" data-act="dt-save">保存</button>'+
+        (cur?'<button class="rc-clear" data-act="dt-clear">清除这一格内容</button>':'')+
+      '</div>';
+    openModal(html);
+  }
+
+  function openClassNote(stuId,lesson){
+    _cur={stu:stuId,lesson:lesson};
+    var stu=stuById(stuId), cid=stu?stu.classId:null, les=lesById(cid,lesson), cur=classNote(stuId,lesson);
+    var html='<h3>'+esc(stu?stu.name:"")+' · 第'+lesson+'节 上课情况</h3>'+
+      (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
+      '<div class="field"><label>这节课情况（写一两句，如：活泼松散，下节课要严格）</label><textarea id="cn-content" rows="4" placeholder="活泼松散，下节课要严格">'+esc(cur)+'</textarea></div>'+
+      '<div class="rc-btns">'+
+        '<button class="rc-makeup" data-act="cn-save">保存</button>'+
+        (cur?'<button class="rc-clear" data-act="cn-clear">清除这一格</button>':'')+
+      '</div>';
+    openModal(html);
+  }
+
+  function openQuick(){
+    var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
+    var qkLessons=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+    var html='<h3>写一笔</h3>'+
+      '<div class="field"><label>选学生（点一下）</label><div class="chips" id="qk-pick">'+state.students.map(function(s){return '<span class="chip" data-pick="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
+      '<div class="field"><label>第几节</label><div class="chips" id="qk-less">'+qkLessons.map(function(n){return '<span class="chip" data-less="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
+      '<div class="rc-btns"><button class="rc-leave" data-act="qk-leave">请假</button><button class="rc-makeup" data-act="qk-makeup">已补课</button></div>';
+    openModal(html);
+  }
+
+  function openModal(html){ document.getElementById("sheet").innerHTML=html; document.getElementById("modal").classList.remove("hidden"); }
+  function closeModal(){ document.getElementById("modal").classList.add("hidden"); }
+  function toast(m){ var t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove("show");},1600); }
+
+  var THEME_CYCLE=["navy","teal","slate"];
+  var THEME_NAME={navy:"商务蓝",teal:"墨绿",slate:"石墨灰"};
+  function cycleTheme(){
+    var i=THEME_CYCLE.indexOf(state.settings.theme);
+    if(i<0) i=0;
+    var next=THEME_CYCLE[(i+1)%THEME_CYCLE.length];
+    state.settings.theme=next; save(); render(); toast("已切换到"+THEME_NAME[next]);
+  }
+  function openSettings(){
+    var html='<h4 style="margin:0 0 6px;">设置</h4>'+
+      '<div class="menu-row" data-act="set-import"><span>导入 JSON</span><span>›</span></div>'+
+      '<div class="menu-row" data-act="set-export"><span>导出备份</span><span>›</span></div>'+
+      '<div class="menu-row" data-act="set-recycle"><span>回收站</span><span>›</span></div>'+
+      '<div class="menu-row" data-act="set-sync"><span>同步</span><span>›</span></div>'+
+      '<div class="menu-row" data-act="set-close" style="color:var(--muted);border-top:1px solid var(--line);">关闭</div>';
+    document.getElementById("menu").innerHTML=html;
+    document.getElementById("menu").classList.remove("hidden");
+    document.getElementById("popMask").classList.remove("hidden");
+  }
+  function closePop(){ document.getElementById("popMask").classList.add("hidden"); }
+
+  function doImport(){
+    var input=document.createElement("input"); input.type="file"; input.accept=".json,application/json";
+    input.onchange=function(){
+      var f=input.files[0]; if(!f) return;
+      var rd=new FileReader();
+      rd.onload=function(){
+        try{
+          var d=JSON.parse(rd.result);
+          if(Array.isArray(d.classes)) state.classes=d.classes.map(function(c){return {id:c.id,name:c.name||""};});
+          if(Array.isArray(d.students)) state.students=d.students.map(function(s,i){return {id:s.id||("s"+i+Math.random().toString(36).slice(2,6)), name:s.name||s, classId:s.classId||""};});
+          // 课程表使用内置 SCHED（按班级），不从导入覆盖
+          if(Array.isArray(d.entries)){
+            var recs=[];
+            d.entries.forEach(function(e){
+              if((e.type==="请假"||e.type==="补课") && e.lesson!=null){
+                var mk=null;
+                if(e.type==="补课") mk=e.date;
+                else if(e.status==="已补" && e.makeUpDate) mk=e.makeUpDate;
+                recs.push({studentId:e.studentId, lesson:Number(e.lesson), leave:true, makeupDate:mk});
+              }
+            });
+            state.records=recs;
+          }
+          save(); render(); toast("导入成功");
+        }catch(e){ toast("JSON 解析失败"); }
+        closePop();
+      };
+      rd.readAsText(f);
+    };
+    input.click();
+  }
+  function doExport(){
+    var blob=new Blob([JSON.stringify({students:state.students,classes:state.classes,records:state.records,classNotes:state.settings.classNotes},null,2)],{type:"application/json"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="student-records.json"; a.click();
+    toast("已导出"); closePop();
+  }
+
+  document.addEventListener("click",function(ev){
+    var el=ev.target.closest("[data-action],[data-act],[data-theme],[data-pick],[data-less],[data-m]");
+    if(!el) return;
+    if(el.dataset.action){
+      var a=el.dataset.action;
+      if(a==="open-theme"){ cycleTheme(); }
+      else if(a==="open-settings"){ openSettings(); }
+      else if(a==="switch-view"){ state.view=el.dataset.view; render(); }
+      else if(a==="switch-month"){ if(!el.dataset.m) return; state.activeMonth=el.dataset.m; render(); }
+      else if(a==="cell"){ openCell(el.dataset.stu, el.dataset.lesson); }
+      else if(a==="cnote"){ openClassNote(el.dataset.stu, el.dataset.lesson); }
+      else if(a==="date"){ openDate(el.dataset.cid, el.dataset.lesson); }
+      else if(a==="open-quick"){ openQuick(); }
+      else if(a==="open-lesson"){ toast("上课记录暂未开放，先把请假/补课做好"); }
+      else if(a==="close-modal"){ closeModal(); }
+      return;
+    }
+    if(el.dataset.act){
+      var act=el.dataset.act;
+      if(act==="rc-leave"){ var ce=curCell(); var nt=document.getElementById("rc-note")?document.getElementById("rc-note").value:""; if(ce) upsertRec(ce.stu,ce.lesson,true,null,nt); closeModal(); }
+      else if(act==="rc-makeup"){ var ce2=curCell(); var dt=document.getElementById("rc-date").value||today(); var nt2=document.getElementById("rc-note")?document.getElementById("rc-note").value:""; if(ce2) upsertRec(ce2.stu,ce2.lesson,true,dt,nt2); closeModal(); }
+      else if(act==="rc-clear"){ var ce3=curCell(); if(ce3) upsertRec(ce3.stu,ce3.lesson,false,null,null); closeModal(); }
+      else if(act==="dt-save"){ var dta=document.getElementById("dt-content"); if(_curDate){ var dk=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(!state.settings.lessonNotes) state.settings.lessonNotes={}; state.settings.lessonNotes[dk]=dta?dta.value.trim():""; save(); render(); closeModal(); } }
+      else if(act==="dt-clear"){ if(_curDate){ var dk2=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(state.settings.lessonNotes) delete state.settings.lessonNotes[dk2]; save(); render(); closeModal(); } }
+      else if(act==="cn-save"){ var cta=document.getElementById("cn-content"); if(_cur){ var ck=_cur.stu+"|"+_cur.lesson; if(!state.settings.classNotes) state.settings.classNotes={}; state.settings.classNotes[ck]=cta?cta.value.trim():""; save(); render(); closeModal(); } }
+      else if(act==="cn-clear"){ if(_cur){ var ck2=_cur.stu+"|"+_cur.lesson; if(state.settings.classNotes) delete state.settings.classNotes[ck2]; save(); render(); closeModal(); } }
+      else if(act==="qk-leave"||act==="qk-makeup"){
+        var ps=document.querySelector("#qk-pick .chip.on"), pl=document.querySelector("#qk-less .chip.on");
+        if(!ps||!pl){ toast("先选学生和节次"); return; }
+        upsertRec(ps.dataset.pick, pl.dataset.less, true, act==="qk-makeup"?(document.getElementById("rc-date")?document.getElementById("rc-date").value:today()):null);
+        closeModal();
+      }
+      else if(act==="set-import"){ doImport(); }
+      else if(act==="set-export"){ doExport(); }
+      else if(act==="set-recycle"){ toast("回收站（后续做）"); }
+      else if(act==="set-sync"){ toast("同步（后续做）"); }
+      else if(act==="set-close"){ closePop(); }
+      return;
+    }
+    if(el.dataset.theme){ state.settings.theme=el.dataset.theme; save(); render(); closePop(); return; }
+    if(el.dataset.pick){ document.querySelectorAll("#qk-pick .chip").forEach(function(c){c.classList.remove("on");}); el.classList.add("on"); return; }
+    if(el.dataset.less){ document.querySelectorAll("#qk-less .chip").forEach(function(c){c.classList.remove("on");}); el.classList.add("on"); return; }
+  });
+  document.getElementById("modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
+  document.getElementById("popMask").addEventListener("click",function(e){ if(e.target===this) closePop(); });
+  // 进度备注卡片：边写边自动保存（不重渲染，保留输入焦点）
+  document.getElementById("tbl").addEventListener("input",function(e){
+    var ta=e.target.closest(".pnote-area");
+    if(ta){ var k=ta.dataset.pn; if(!state.settings.progressNotes) state.settings.progressNotes={}; state.settings.progressNotes[k]=ta.value; save(); }
+  });
+
+  function curCell(){ if(!_cur) return null; return _cur; }
+
+    load();
+    if(!state.students.length) seedDefault();
+    render();
+})();
+</script>
+</body>
+</html>
