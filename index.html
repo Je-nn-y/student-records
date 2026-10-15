@@ -172,10 +172,11 @@
   .toast.show{opacity:1;}
   .hidden{display:none!important;}
   /* 个人情况：三模块子标签 + 记录列表（record-first，只显示写过的） */
+  .person-root{ padding:0; }
+  .psearch{ padding:8px 10px 4px; }
+  .psearch input{ width:100%; border:1.5px solid var(--line); border-radius:0; padding:11px 12px; font-size:14px; background:#fff; color:var(--ink); font-family:inherit; }
   .subseg{
-    position:sticky; top:146px; z-index:15;
     display:flex; gap:8px; padding:7px 12px; background:var(--bg);
-    border-bottom:1px solid var(--line);
   }
   .subseg-btn{
     flex:1; border:1.5px solid var(--line); background:#fff; color:var(--ink);
@@ -214,7 +215,8 @@
   .stu-counts{ flex:1; font-size:12px; color:var(--muted); }
   .stu-go{ font-size:20px; font-weight:800; color:var(--muted); }
   /* 个人情况：单个学生详情页（只显示该学生，不含其他人） */
-  .pdetail-h{ position:sticky; top:102px; z-index:15; display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .pdetail-top{ position:sticky; top:104px; z-index:15; background:var(--bg); border-bottom:1px solid var(--line); }
+  .pdetail-h{ display:flex; align-items:center; gap:10px; padding:10px 12px; }
   .pback{ border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:0; padding:7px 13px; font-size:14px; font-weight:800; cursor:pointer; }
   .pdetail-name{ font-weight:800; font-size:17px; color:var(--ink); }
   .field textarea#imp-text{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.6; }
@@ -234,6 +236,7 @@
   </div>
   <div class="months" id="months"></div>
   <div class="tbl-wrap" id="tbl"></div>
+  <div id="ptbl" class="person-root" style="display:none"></div>
 
   <div class="bottombar">
     <button data-action="open-quick">写一笔</button>
@@ -286,7 +289,7 @@
       {studentId:"mujj6bmkstc4h",lesson:6,leave:true,makeupDate:null},
       {studentId:"mui73c51chrs0",lesson:7,leave:true,makeupDate:null}
     ];
-    var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", pstu:null, settings:{
+    var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", pstu:null, search:"", settings:{
       theme:"navy",
       lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
       progressNotes:{      // 每班进度备注（可自己改）
@@ -395,8 +398,9 @@
       seg.querySelectorAll("button[data-view]").forEach(function(b){ b.classList.toggle("on", b.dataset.view===view); });
     }
     var mh=document.getElementById("months");
-    if(view==="person"){ mh.style.display="none"; renderPerson(); return; }
-    mh.style.display="";
+    var tbl=document.getElementById("tbl"), ptbl=document.getElementById("ptbl");
+    if(view==="person"){ mh.style.display="none"; tbl.style.display="none"; ptbl.style.display=""; renderPerson(); return; }
+    mh.style.display=""; ptbl.style.display="none"; tbl.style.display="";
     var ms=months();
     if(!state.activeMonth || ms.indexOf(state.activeMonth)<0) state.activeMonth=ms[0]||today().slice(0,7);
     var idx=ms.indexOf(state.activeMonth);
@@ -467,14 +471,24 @@
     renderStudentList();
   }
   function renderStudentList(){
+    window.scrollTo(0,0);
     if(!state.students.length){
-      document.getElementById("tbl").innerHTML='<div class="pempty">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
+      document.getElementById("ptbl").innerHTML='<div class="pempty">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
       return;
     }
-    var html='<div class="stu-list">';
+    var html='<div class="psearch"><input id="psearch" type="search" inputmode="search" placeholder="搜学生名字…" value="'+esc(state.search||"")+'"></div>';
+    html+='<div class="stu-list" id="stulist">'+buildStuCards()+'</div>';
+    document.getElementById("ptbl").innerHTML=html;
+  }
+  function buildStuCards(){
+    var q=(state.search||"").trim().toLowerCase();
+    var html='';
+    var any=false;
     classOrder().forEach(function(cid){
       var stus=state.students.filter(function(s){return s.classId===cid;});
+      if(q) stus=stus.filter(function(s){ return (s.name||"").toLowerCase().indexOf(q)>=0; });
       if(!stus.length) return;
+      any=true;
       var cname=className(cid);
       html+='<div class="stu-class-h"><span class="cn-dot cn-'+cname+'"></span>'+esc(cname)+' 班</div>';
       stus.forEach(function(s){
@@ -489,27 +503,28 @@
         '</div>';
       });
     });
-    html+='</div>';
-    document.getElementById("tbl").innerHTML=html;
+    if(!any) html='<div class="pempty">没找到「'+(state.search||"")+'」相关的小朋友</div>';
+    return html;
   }
   function renderPersonDetail(stuId){
+    window.scrollTo(0,0);
     var stu=stuById(stuId); if(!stu){ state.pstu=null; renderStudentList(); return; }
     var cls=className(stu.classId);
     var sub=state.subtab||"lesson";
     var tabs=[{k:"lesson",t:"上课"},{k:"parent",t:"家长"},{k:"checkin",t:"打卡"}];
-    var html='<div class="pdetail-h">'+
+    var html='<div class="pdetail-top"><div class="pdetail-h">'+
       '<button class="pback" data-action="pback">‹ 返回</button>'+
       '<span class="pdetail-name">'+esc(stu.name)+'</span>'+
       '<span class="pc-tag">'+esc(cls)+' 班</span>'+
     '</div>';
     html+='<div class="subseg">';
     tabs.forEach(function(tb){ html+='<button class="subseg-btn'+(sub===tb.k?" on":"")+'" data-action="switch-sub" data-sub="'+tb.k+'">'+tb.t+'</button>'; });
-    html+='</div><div class="person-wrap">';
+    html+='</div></div><div class="person-wrap">';
     if(sub==="lesson") html+=personLesson(stuId);
     else if(sub==="parent") html+=personList("parent",stuId);
     else html+=personList("checkin",stuId);
     html+='</div>';
-    document.getElementById("tbl").innerHTML=html;
+    document.getElementById("ptbl").innerHTML=html;
   }
   function addBtn(mod,stuId){
     var label={lesson:"上课",parent:"家长",checkin:"打卡"}[mod]||"";
@@ -820,6 +835,11 @@
   document.getElementById("tbl").addEventListener("input",function(e){
     var ta=e.target.closest(".pnote-area");
     if(ta){ var k=ta.dataset.pn; if(!state.settings.progressNotes) state.settings.progressNotes={}; state.settings.progressNotes[k]=ta.value; save(); }
+  });
+  // 个人情况：学生搜索（只更新列表，保留搜索框焦点）
+  document.getElementById("ptbl").addEventListener("input",function(e){
+    var s=e.target.closest("#psearch");
+    if(s){ state.search=s.value; var box=document.getElementById("stulist"); if(box) box.innerHTML=buildStuCards(); }
   });
 
   function curCell(){ if(!_cur) return null; return _cur; }
