@@ -173,7 +173,7 @@
   .hidden{display:none!important;}
   /* 个人情况：三模块子标签 + 记录列表（record-first，只显示写过的） */
   .subseg{
-    position:sticky; top:102px; z-index:15;
+    position:sticky; top:146px; z-index:15;
     display:flex; gap:8px; padding:7px 12px; background:var(--bg);
     border-bottom:1px solid var(--line);
   }
@@ -198,6 +198,25 @@
     border-radius:0; padding:13px; font-size:14px; font-weight:800; cursor:pointer;
   }
   .padd:active{ background:#F5F8FC; }
+  /* 个人情况：学生列表（进详情前的选择页） */
+  .stu-list{ padding:8px 10px 14px; }
+  .stu-class-h{ display:flex; align-items:center; gap:8px; margin:14px 2px 9px; font-weight:800; font-size:14px; color:var(--ink); }
+  .cn-dot{ width:10px; height:10px; border-radius:0; flex:0 0 auto; }
+  .cn-dot.cn-P2{ background:var(--blueD); }
+  .cn-dot.cn-L2{ background:var(--greenD); }
+  .cn-dot.cn-P4{ background:var(--yellowD); }
+  .stu-card{ display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); margin-bottom:10px; padding:13px 12px; box-shadow:0 1px 4px rgba(0,0,0,.05); cursor:pointer; }
+  .stu-card.pc-P2{ border-left-color:var(--blueD); }
+  .stu-card.pc-L2{ border-left-color:var(--greenD); }
+  .stu-card.pc-P4{ border-left-color:var(--yellowD); }
+  .stu-card:active{ background:#F5F8FC; }
+  .stu-name{ font-weight:800; font-size:16px; color:var(--ink); }
+  .stu-counts{ flex:1; font-size:12px; color:var(--muted); }
+  .stu-go{ font-size:20px; font-weight:800; color:var(--muted); }
+  /* 个人情况：单个学生详情页（只显示该学生，不含其他人） */
+  .pdetail-h{ position:sticky; top:102px; z-index:15; display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--bg); border-bottom:1px solid var(--line); }
+  .pback{ border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:0; padding:7px 13px; font-size:14px; font-weight:800; cursor:pointer; }
+  .pdetail-name{ font-weight:800; font-size:17px; color:var(--ink); }
   .field textarea#imp-text{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.6; }
 </style>
 </head>
@@ -267,7 +286,7 @@
       {studentId:"mujj6bmkstc4h",lesson:6,leave:true,makeupDate:null},
       {studentId:"mui73c51chrs0",lesson:7,leave:true,makeupDate:null}
     ];
-    var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", settings:{
+    var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", pstu:null, settings:{
       theme:"navy",
       lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
       progressNotes:{      // 每班进度备注（可自己改）
@@ -444,65 +463,96 @@
     document.getElementById("tbl").innerHTML=html;
   }
   function renderPerson(){
-    var sub=state.subtab||"lesson";
-    var tabs=[{k:"lesson",t:"上课"},{k:"parent",t:"家长"},{k:"checkin",t:"打卡"}];
-    var html='<div class="subseg">';
-    tabs.forEach(function(tb){ html+='<button class="subseg-btn'+(sub===tb.k?" on":"")+'" data-action="switch-sub" data-sub="'+tb.k+'">'+tb.t+'</button>'; });
-    html+='</div><div class="person-wrap">';
-    if(sub==="lesson") html+=personLesson();
-    else if(sub==="parent") html+=personList("parent","家长");
-    else html+=personList("checkin","打卡");
+    if(state.pstu){ renderPersonDetail(state.pstu); return; }
+    renderStudentList();
+  }
+  function renderStudentList(){
+    if(!state.students.length){
+      document.getElementById("tbl").innerHTML='<div class="pempty">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
+      return;
+    }
+    var html='<div class="stu-list">';
+    classOrder().forEach(function(cid){
+      var stus=state.students.filter(function(s){return s.classId===cid;});
+      if(!stus.length) return;
+      var cname=className(cid);
+      html+='<div class="stu-class-h"><span class="cn-dot cn-'+cname+'"></span>'+esc(cname)+' 班</div>';
+      stus.forEach(function(s){
+        var p=state.settings.person||{};
+        var nl=(p.lesson||[]).filter(function(r){return r.stuId===s.id;}).length;
+        var np=(p.parent||[]).filter(function(r){return r.stuId===s.id;}).length;
+        var nc=(p.checkin||[]).filter(function(r){return r.stuId===s.id;}).length;
+        html+='<div class="stu-card pc-'+cname+'" data-action="penter" data-stu="'+s.id+'">'+
+          '<span class="stu-name">'+esc(s.name)+'</span>'+
+          '<span class="stu-counts">上课 '+nl+' · 家长 '+np+' · 打卡 '+nc+'</span>'+
+          '<span class="stu-go">›</span>'+
+        '</div>';
+      });
+    });
     html+='</div>';
     document.getElementById("tbl").innerHTML=html;
   }
-  function addBtn(mod){
-    var label={lesson:"上课",parent:"家长",checkin:"打卡"}[mod]||"";
-    return '<button class="padd" data-action="padd" data-mod="'+mod+'">＋ 添加一条'+label+'</button>';
+  function renderPersonDetail(stuId){
+    var stu=stuById(stuId); if(!stu){ state.pstu=null; renderStudentList(); return; }
+    var cls=className(stu.classId);
+    var sub=state.subtab||"lesson";
+    var tabs=[{k:"lesson",t:"上课"},{k:"parent",t:"家长"},{k:"checkin",t:"打卡"}];
+    var html='<div class="pdetail-h">'+
+      '<button class="pback" data-action="pback">‹ 返回</button>'+
+      '<span class="pdetail-name">'+esc(stu.name)+'</span>'+
+      '<span class="pc-tag">'+esc(cls)+' 班</span>'+
+    '</div>';
+    html+='<div class="subseg">';
+    tabs.forEach(function(tb){ html+='<button class="subseg-btn'+(sub===tb.k?" on":"")+'" data-action="switch-sub" data-sub="'+tb.k+'">'+tb.t+'</button>'; });
+    html+='</div><div class="person-wrap">';
+    if(sub==="lesson") html+=personLesson(stuId);
+    else if(sub==="parent") html+=personList("parent",stuId);
+    else html+=personList("checkin",stuId);
+    html+='</div>';
+    document.getElementById("tbl").innerHTML=html;
   }
-  function emptyPerson(mod,msg){ return '<div class="pempty">'+esc(msg)+'</div>'+addBtn(mod); }
-  function personLesson(){
-    var arr=(state.settings.person.lesson||[]).slice();
-    arr.sort(function(a,b){
-      var sa=stuById(a.stuId), sb=stuById(b.stuId);
-      var ca=sa?classOrder().indexOf(sa.classId):-1, cb=sb?classOrder().indexOf(sb.classId):-1;
-      if(ca!==cb) return ca-cb;
-      var na=sa?sa.name:"", nb=sb?sb.name:"";
-      if(na!==nb) return na<nb?-1:1;
-      return (a.lesson||0)-(b.lesson||0);
-    });
-    if(!arr.length) return emptyPerson("lesson","还没有课堂记录，点右下角「记一堂课」或下面按钮添加。");
+  function addBtn(mod,stuId){
+    var label={lesson:"上课",parent:"家长",checkin:"打卡"}[mod]||"";
+    return '<button class="padd" data-action="padd" data-mod="'+mod+'"'+(stuId?' data-stu="'+stuId+'"':'')+'>＋ 添加一条'+label+'</button>';
+  }
+  function emptyPerson(mod,msg,stuId){ return '<div class="pempty">'+esc(msg)+'</div>'+addBtn(mod,stuId); }
+  function personLesson(stuId){
+    var arr=(state.settings.person.lesson||[]).filter(function(r){return !stuId||r.stuId===stuId;}).slice();
+    arr.sort(function(a,b){ return (a.lesson||0)-(b.lesson||0); });
+    if(!arr.length) return emptyPerson("lesson","还没有课堂记录，点右下角「记一堂课」或下面按钮添加。",stuId);
     var html='';
     arr.forEach(function(r){
       var stu=stuById(r.stuId), cls=stu?className(stu.classId):"";
       var dt=r.date?fmtMD(r.date):"";
       html+='<div class="pcard pc-'+cls+'">'+
-        '<div class="pcard-h"><span class="pc-name">'+esc(stu?stu.name:"?")+'</span><span class="pc-tag">L'+r.lesson+(dt?' · '+dt:'')+'</span></div>'+
+        '<div class="pcard-h"><span class="pc-tag">L'+r.lesson+(dt?' · '+dt:'')+'</span></div>'+
         '<div class="pcard-body" data-action="pedit" data-mod="lesson" data-id="'+r.id+'">'+esc(r.text||'')+'</div>'+
       '</div>';
     });
-    html+=addBtn("lesson");
+    html+=addBtn("lesson",stuId);
     return html;
   }
-  function personList(mod,label){
-    var arr=(state.settings.person[mod]||[]).slice();
+  function personList(mod,stuId){
+    var label={parent:"家长",checkin:"打卡"}[mod]||"";
+    var arr=(state.settings.person[mod]||[]).filter(function(r){return !stuId||r.stuId===stuId;}).slice();
     arr.sort(function(a,b){ return (b.date||"")<(a.date||"")?-1:(b.date>(a.date||"")?1:0); });
-    if(!arr.length) return emptyPerson(mod,"还没有"+label+"记录，点下面按钮添加。");
+    if(!arr.length) return emptyPerson(mod,"还没有"+label+"记录，点下面按钮添加。",stuId);
     var html='';
     arr.forEach(function(r){
       var stu=stuById(r.stuId), cls=stu?className(stu.classId):"";
       var dt=r.date?fmtMD(r.date):"";
       html+='<div class="pcard pc-'+cls+'">'+
-        '<div class="pcard-h"><span class="pc-name">'+esc(stu?stu.name:"?")+'</span>'+(dt?'<span class="pc-tag">'+dt+'</span>':'')+'</div>'+
+        '<div class="pcard-h">'+(dt?'<span class="pc-tag">'+dt+'</span>':'')+'</div>'+
         '<div class="pcard-body" data-action="pedit" data-mod="'+mod+'" data-id="'+r.id+'">'+esc(r.text||'')+'</div>'+
       '</div>';
     });
-    html+=addBtn(mod);
+    html+=addBtn(mod,stuId);
     return html;
   }
-  function openPersonEdit(mod,id){
+  function openPersonEdit(mod,id,defStu){
     var isEdit=!!id;
     var rec=isEdit?(state.settings.person[mod]||[]).find(function(r){return r.id===id;}):null;
-    var stuId=rec?rec.stuId:"";
+    var stuId=rec?rec.stuId:(defStu||(state.pstu||(state.students[0]&&state.students[0].id)||""));
     var MODLABEL={lesson:"课堂记录",parent:"家长沟通",checkin:"打卡"}[mod]||"";
     var html='<h3>'+(isEdit?"编辑":"添加")+MODLABEL+'</h3>';
     html+='<div class="field"><label>学生</label><select id="p-stu">'+state.students.map(function(s){return '<option value="'+s.id+'"'+(s.id===stuId?" selected":"")+'>'+esc(s.name)+'</option>';}).join("")+'</select></div>';
@@ -704,7 +754,9 @@
       else if(a==="switch-sub"){ state.subtab=el.dataset.sub; render(); }
       else if(a==="open-quick"){ openQuick(); }
       else if(a==="open-lesson"){ openLessonCapture(); }
-      else if(a==="padd"){ openPersonEdit(el.dataset.mod, null); }
+      else if(a==="penter"){ state.pstu=el.dataset.stu; render(); }
+      else if(a==="pback"){ state.pstu=null; render(); }
+      else if(a==="padd"){ openPersonEdit(el.dataset.mod, null, el.dataset.stu); }
       else if(a==="pedit"){ openPersonEdit(el.dataset.mod, el.dataset.id); }
       return;
     }
