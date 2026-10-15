@@ -116,45 +116,56 @@
     font-size:13px; line-height:1.8; font-family:inherit; color:var(--ink); background:#fff; resize:vertical; }
   .bottombar{
     position:fixed; left:0; right:0; bottom:0; z-index:25;
-    display:flex; gap:10px; padding:12px 14px calc(12px + env(safe-area-inset-bottom));
-    background:var(--bg); border-top:1px solid var(--line);
+    display:flex; gap:12px; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:rgba(246,249,253,.78);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+    border-top:1px solid rgba(220,228,236,.7);
   }
   .bottombar button{
-    flex:1; border:none; border-radius:0; padding:14px; font-size:15px; font-weight:800;
-    color:#fff; cursor:pointer; background:var(--accent);
-    box-shadow:0 4px 12px rgba(0,0,0,.12);
+    flex:1; border:1px solid rgba(47,109,181,.28); border-radius:16px; padding:13px 10px;
+    font-size:15px; font-weight:600; color:var(--accent); cursor:pointer;
+    background:rgba(255,255,255,.72);
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .12s ease, background .18s ease;
+    box-shadow:0 2px 8px rgba(47,109,181,.06);
   }
-  .bottombar button:active{transform:scale(.97);}
+  .bottombar button:active{transform:scale(.97); background:rgba(255,255,255,.96);}
+  .bottombar button svg{width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round;}
   .modal-mask{
-    position:fixed; inset:0; z-index:70; background:rgba(40,30,50,.45);
+    position:fixed; inset:0; z-index:70; background:rgba(40,30,50,.3);
     display:flex; align-items:flex-end; justify-content:center;
   }
   .modal-mask.hidden{display:none;}
   .sheet{
-    width:100%; max-width:460px; background:var(--card); border-radius:0;
-    padding:20px 18px calc(20px + env(safe-area-inset-bottom)); animation:up .18s ease;
+    width:100%; max-width:460px; background:var(--card); border-radius:18px 18px 0 0;
+    padding:8px 18px calc(20px + env(safe-area-inset-bottom)); animation:up .2s cubic-bezier(.22,.9,.3,1);
+    box-shadow:0 -6px 24px rgba(30,40,60,.12);
   }
-  @keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0)}}
-  .sheet h3{margin:0 0 4px; font-size:18px;}
+  .sheet-handle{width:38px; height:4px; border-radius:3px; background:rgba(120,130,145,.35); margin:6px auto 12px;}
+  @keyframes up{from{transform:translateY(48px);opacity:.55}to{transform:translateY(0)}}
+  .sheet h3{margin:0 0 4px; font-size:17px; font-weight:600; color:var(--ink);}
   .sheet .sub{color:var(--muted); font-size:12px; margin-bottom:12px;}
   .field{margin-bottom:12px;}
   .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600;}
   .field input, .field select, .field textarea{
-    width:100%; border:1.5px solid var(--line); border-radius:0; padding:10px;
+    width:100%; border:1.5px solid var(--line); border-radius:10px; padding:11px;
     font-size:14px; background:#fff; color:var(--ink); font-family:inherit;
   }
-  .rc-btns{display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+  .rc-btns{display:flex; flex-direction:column; gap:9px; margin-top:6px;}
   .rc-btns button{
-    border:none; border-radius:0; padding:13px; font-size:15px; font-weight:800; cursor:pointer; color:#fff;
+    border:none; border-radius:11px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; color:#fff;
   }
   .rc-leave{background:#FF4D6D;}
   .rc-makeup{background:#0EA371;}
-  .rc-clear{background:#EFE7F2; color:var(--muted);}
-  .chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .rc-clear{background:transparent; color:var(--muted); border:1px solid var(--line);}
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
   .chip{
-    border:1.5px solid var(--line); background:#fff; border-radius:0; padding:8px 12px;
+    border:1.5px solid var(--line); background:#fff; border-radius:11px; padding:9px 13px;
     font-size:13px; cursor:pointer; color:var(--ink); font-weight:600;
+    transition:transform .1s ease;
   }
+  .chip:active{transform:scale(.96);}
   .chip.on{background:var(--accent); color:#fff; border-color:transparent;}
   .top-actions{display:flex; gap:8px;}
   .pop-mask{position:fixed; inset:0; z-index:60; background:rgba(40,30,50,.22);}
@@ -239,8 +250,14 @@
   <div id="ptbl" class="person-root" style="display:none"></div>
 
   <div class="bottombar">
-    <button data-action="open-quick">写一笔</button>
-    <button data-action="open-lesson">记一堂课</button>
+    <button data-action="open-quick">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      写一笔
+    </button>
+    <button data-action="open-lesson">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+      记一堂课
+    </button>
   </div>
 
   <div class="modal-mask hidden" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -591,8 +608,8 @@
     var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
     var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
     var html='<h3>记一堂课</h3>'+
-      '<div class="field"><label>学生</label><select id="lc-stu">'+state.students.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join("")+'</select></div>'+
-      '<div class="field"><label>第几节</label><select id="lc-les">'+less.map(function(n){return '<option value="'+n+'">L'+n+'</option>';}).join("")+'</select></div>'+
+      '<div class="field"><label>选学生</label><div class="chips" id="lc-pick">'+state.students.map(function(s){return '<span class="chip" data-lp="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
+      '<div class="field"><label>第几节</label><div class="chips" id="lc-less">'+less.map(function(n){return '<span class="chip" data-ll="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
       '<div class="field"><label>这节课情况</label><textarea id="lc-text" rows="4" placeholder="活泼松散，下节课要严格"></textarea></div>'+
       '<div class="rc-btns"><button class="rc-makeup" data-act="lc-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
     openModal(html);
@@ -637,7 +654,7 @@
     openModal(html);
   }
 
-  function openModal(html){ document.getElementById("sheet").innerHTML=html; document.getElementById("modal").classList.remove("hidden"); }
+  function openModal(html){ document.getElementById("sheet").innerHTML='<div class="sheet-handle"></div>'+html; document.getElementById("modal").classList.remove("hidden"); }
   function closeModal(){ document.getElementById("modal").classList.add("hidden"); }
   function toast(m){ var t=document.getElementById("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove("show");},1600); }
 
@@ -756,7 +773,7 @@
   }
 
   document.addEventListener("click",function(ev){
-    var el=ev.target.closest("[data-action],[data-act],[data-theme],[data-pick],[data-less],[data-m]");
+    var el=ev.target.closest("[data-action],[data-act],[data-theme],[data-pick],[data-less],[data-lp],[data-ll],[data-m]");
     if(!el) return;
     if(el.dataset.action){
       var a=el.dataset.action;
@@ -804,10 +821,12 @@
         save(); render(); closeModal(); toast("已删除");
       }
       else if(act==="lc-save"){
-        var lstu=document.getElementById("lc-stu").value, lles=Number(document.getElementById("lc-les").value);
-        var lst=stuById(lstu), lcid=lst?lst.classId:null, ll=lesById(lcid,lles);
-        state.settings.person.lesson.push({id:genId(), stuId:lstu, lesson:lles, date:ll?ll.date:null, text:document.getElementById("lc-text").value.trim()});
-        save(); state.view="person"; state.subtab="lesson"; render(); closeModal(); toast("已记录到「上课」");
+        var lp=document.querySelector("#lc-pick .chip.on"), ll=document.querySelector("#lc-less .chip.on");
+        if(!lp||!ll){ toast("先选学生和第几节"); return; }
+        var lstu=lp.dataset.lp, lles=Number(ll.dataset.ll);
+        var lst=stuById(lstu), lcid=lst?lst.classId:null, lrec=lesById(lcid,lles);
+        state.settings.person.lesson.push({id:genId(), stuId:lstu, lesson:lles, date:lrec?lrec.date:null, text:document.getElementById("lc-text").value.trim()});
+        save(); state.view="person"; state.subtab="lesson"; state.pstu=lstu; render(); closeModal(); toast("已记录到「上课」");
       }
       else if(act==="imp-file"){ var fi=document.createElement("input"); fi.type="file"; fi.accept=".json,application/json"; fi.onchange=function(){ if(fi.files[0]) importFromFile(fi.files[0]); }; fi.click(); }
       else if(act==="imp-go"){ var it=document.getElementById("imp-text"); parseImport(it?it.value:""); }
@@ -828,6 +847,8 @@
     if(el.dataset.theme){ state.settings.theme=el.dataset.theme; save(); render(); closePop(); return; }
     if(el.dataset.pick){ document.querySelectorAll("#qk-pick .chip").forEach(function(c){c.classList.remove("on");}); el.classList.add("on"); return; }
     if(el.dataset.less){ document.querySelectorAll("#qk-less .chip").forEach(function(c){c.classList.remove("on");}); el.classList.add("on"); return; }
+    if(el.dataset.lp){ document.querySelectorAll("#lc-pick .chip").forEach(function(c){c.classList.remove("on");}); el.classList.add("on"); return; }
+    if(el.dataset.ll){ document.querySelectorAll("#lc-less .chip").forEach(function(c){c.classList.remove("on");}); el.classList.add("on"); return; }
   });
   document.getElementById("modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
   document.getElementById("popMask").addEventListener("click",function(e){ if(e.target===this) closePop(); });
