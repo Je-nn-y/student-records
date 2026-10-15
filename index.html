@@ -168,6 +168,19 @@
   .chip:active{transform:scale(.96);}
   .chip.on{background:var(--accent); color:#fff; border-color:transparent;}
   .top-actions{display:flex; gap:8px;}
+  /* 弹窗头部图标徽标（区分创意 / 课堂） */
+  .sheet-head{display:flex; align-items:center; gap:11px; margin-bottom:4px;}
+  .sheet-ico{width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; box-shadow:0 3px 9px rgba(30,40,60,.14);}
+  .sheet-ico svg{width:20px; height:20px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
+  .sheet-ico.idea{background:linear-gradient(135deg,#F7B955,#E58E2B);}
+  .sheet-ico.lesson{background:var(--accent);}
+  .idea-tag{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; background:#FFF3E0; color:#C77700;}
+  .pc-mod{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:800; color:var(--ink);}
+  .pc-mod .emi{font-size:14px; line-height:1;}
+  .pcard-h .pc-tag{font-size:11px; font-weight:800; padding:3px 10px; color:var(--muted); background:#F2F4F7; border-radius:999px;}
+  .trait-badge{display:inline-block; margin-top:3px; font-size:9px; font-weight:800; color:#C77700; background:#FFF3E0; padding:1px 6px; border-radius:6px;}
+  .pcard{border-radius:10px;}
+  .stu-card{border-radius:10px;}
   .pop-mask{position:fixed; inset:0; z-index:60; background:rgba(40,30,50,.22);}
   .pop-mask.hidden{display:none;}
   .pop{position:fixed; top:58px; right:10px; width:230px; background:var(--card); box-shadow:0 10px 30px rgba(0,0,0,.22); padding:16px;}
@@ -313,10 +326,11 @@
         l2:"L2班整体进度较其他班慢2节课（缺9.25、9.27内容）。安安缺2节，进度正好；欢欢额外缺10.5、10.6，共缺4节，比安安多落后2节。"
       },
       person:{             // 个人情况三模块（record-first，只显示写过的）
-        lesson:[],         // 上课： {id, stuId, lesson, date, text}
+        lesson:[],         // 上课： {id, stuId, lesson, date, text, idea?}
         parent:[],         // 家长： {id, stuId, date, text}
         checkin:[]         // 打卡： {id, stuId, date, text}
-      }
+      },
+      classTraits:[]       // 记一堂课：班级共同特点 {id, classId, lesson, date, text}
     }, activeMonth:null };
 
   function load(){
@@ -356,6 +370,7 @@
   function stuById(id){ return state.students.find(function(s){return s.id===id;}); }
   function classSched(cid){ var c=classMap()[cid]; var nm=c?(c.name||"").toLowerCase():""; return SCHED[nm]||[]; }
   function lesById(cid,n){ var arr=classSched(cid); return arr.find(function(l){return l.n===Number(n);}); }
+  function findTrait(cid,lesson){ return (state.settings.classTraits||[]).find(function(t){return t.classId===cid && Number(t.lesson)===Number(lesson);}); }
   function getRec(stuId,lesson){ return state.records.find(function(r){return r.studentId===stuId && r.lesson===Number(lesson);}); }
   function lessonContent(cid,n){ var k=(className(cid)||"").toLowerCase()+"|"+n; return (state.settings.lessonNotes&&state.settings.lessonNotes[k])||""; }
   function upsertRec(stuId,lesson,leave,makeupDate,note){
@@ -452,6 +467,7 @@
         html+='<td class="datecell" data-action="date" data-cid="'+cid+'" data-lesson="'+n+'">';
         html+='<div class="dd">'+dt+'</div>';
         if(lc) html+='<div class="dc">'+esc(lc)+'</div>';
+        if(findTrait(cid,n)) html+='<span class="trait-badge">✦ 特点</span>';
         html+='</td>';
       });
       html+='</tr>';
@@ -551,21 +567,25 @@
   function personLesson(stuId){
     var arr=(state.settings.person.lesson||[]).filter(function(r){return !stuId||r.stuId===stuId;}).slice();
     arr.sort(function(a,b){ return (a.lesson||0)-(b.lesson||0); });
-    if(!arr.length) return emptyPerson("lesson","还没有课堂记录，点右下角「记一堂课」或下面按钮添加。",stuId);
+    if(!arr.length) return emptyPerson("lesson","还没有课堂记录。点底部「写一笔」记个想法/玩法，或点下面按钮添加。",stuId);
     var html='';
     arr.forEach(function(r){
       var stu=stuById(r.stuId), cls=stu?className(stu.classId):"";
       var dt=r.date?fmtMD(r.date):"";
-      html+='<div class="pcard pc-'+cls+'">'+
-        '<div class="pcard-h"><span class="pc-tag">L'+r.lesson+(dt?' · '+dt:'')+'</span></div>'+
-        '<div class="pcard-body" data-action="pedit" data-mod="lesson" data-id="'+r.id+'">'+esc(r.text||'')+'</div>'+
-      '</div>';
+      var head='<span class="pc-mod"><span class="emi">'+(r.idea?'💡':'📘')+'</span>'+(r.idea?'想法':'上课')+'</span>';
+      var right='';
+      if(r.lesson) right+='<span class="pc-tag">L'+r.lesson+(dt?' · '+dt:'')+'</span>';
+      else if(dt) right+='<span class="pc-tag">'+dt+'</span>';
+      if(r.idea) right+='<span class="idea-tag">创意</span>';
+      html+='<div class="pcard pc-'+cls+'"><div class="pcard-h">'+head+right+'</div>'+
+        '<div class="pcard-body" data-action="pedit" data-mod="lesson" data-id="'+r.id+'">'+esc(r.text||'')+'</div></div>';
     });
     html+=addBtn("lesson",stuId);
     return html;
   }
   function personList(mod,stuId){
     var label={parent:"家长",checkin:"打卡"}[mod]||"";
+    var emi={parent:"💬",checkin:"✅"}[mod]||"•";
     var arr=(state.settings.person[mod]||[]).filter(function(r){return !stuId||r.stuId===stuId;}).slice();
     arr.sort(function(a,b){ return (b.date||"")<(a.date||"")?-1:(b.date>(a.date||"")?1:0); });
     if(!arr.length) return emptyPerson(mod,"还没有"+label+"记录，点下面按钮添加。",stuId);
@@ -573,10 +593,10 @@
     arr.forEach(function(r){
       var stu=stuById(r.stuId), cls=stu?className(stu.classId):"";
       var dt=r.date?fmtMD(r.date):"";
-      html+='<div class="pcard pc-'+cls+'">'+
-        '<div class="pcard-h">'+(dt?'<span class="pc-tag">'+dt+'</span>':'')+'</div>'+
-        '<div class="pcard-body" data-action="pedit" data-mod="'+mod+'" data-id="'+r.id+'">'+esc(r.text||'')+'</div>'+
-      '</div>';
+      var head='<span class="pc-mod"><span class="emi">'+emi+'</span>'+label+'</span>';
+      var right=dt?'<span class="pc-tag">'+dt+'</span>':'';
+      html+='<div class="pcard pc-'+cls+'"><div class="pcard-h">'+head+right+'</div>'+
+        '<div class="pcard-body" data-action="pedit" data-mod="'+mod+'" data-id="'+r.id+'">'+esc(r.text||'')+'</div></div>';
     });
     html+=addBtn(mod,stuId);
     return html;
@@ -607,10 +627,11 @@
   function openLessonCapture(){
     var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
     var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
-    var html='<h3>记一堂课</h3>'+
-      '<div class="field"><label>选学生</label><div class="chips" id="lc-pick">'+state.students.map(function(s){return '<span class="chip" data-lp="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
+    var html='<div class="sheet-head"><span class="sheet-ico lesson"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><div><h3>记一堂课</h3></div></div>'+
+      '<div class="sub">选班级和第几节，记下这堂课同学们的共同特点。</div>'+
+      '<div class="field"><label>选班级</label><div class="chips" id="lc-pick">'+state.classes.map(function(c){return '<span class="chip" data-lp="'+c.id+'">'+esc(className(c.id))+' 班</span>';}).join("")+'</div></div>'+
       '<div class="field"><label>第几节</label><div class="chips" id="lc-less">'+less.map(function(n){return '<span class="chip" data-ll="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
-      '<div class="field"><label>这节课情况</label><textarea id="lc-text" rows="4" placeholder="活泼松散，下节课要严格"></textarea></div>'+
+      '<div class="field"><label>这堂课同学们的共同特点</label><textarea id="lc-text" rows="4" placeholder="整体活跃，拼读普遍偏弱，三个孩子抢着回答…"></textarea></div>'+
       '<div class="rc-btns"><button class="rc-makeup" data-act="lc-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
     openModal(html);
   }
@@ -633,13 +654,14 @@
 
   function openDate(cid,lesson){
     _curDate={cid:cid,lesson:lesson};
-    var les=lesById(cid,lesson), cur=lessonContent(cid,lesson);
-    var html='<h3>'+esc(className(cid))+' 班 · 第'+lesson+'节</h3>'+
+    var les=lesById(cid,lesson), cur=lessonContent(cid,lesson), trait=findTrait(cid,lesson);
+    var html='<div class="sheet-head"><span class="sheet-ico lesson"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><div><h3>'+esc(className(cid))+' 班 · 第'+lesson+'节</h3></div></div>'+
       (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
       '<div class="field"><label>当天上的课（写简短，如：复习A和E）</label><textarea id="dt-content" rows="3" placeholder="复习A和E / 字母组合 oi,oy…">'+esc(cur)+'</textarea></div>'+
+      '<div class="field"><label>这堂课同学们的共同特点（记一堂课）</label><textarea id="dt-trait" rows="3" placeholder="整体活跃 / 拼读普遍偏弱 / 三个孩子抢着回答…">'+esc(trait?trait.text:'')+'</textarea></div>'+
       '<div class="rc-btns">'+
         '<button class="rc-makeup" data-act="dt-save">保存</button>'+
-        (cur?'<button class="rc-clear" data-act="dt-clear">清除这一格内容</button>':'')+
+        ((cur||trait)?'<button class="rc-clear" data-act="dt-clear">清除这一格</button>':'')+
       '</div>';
     openModal(html);
   }
@@ -647,10 +669,12 @@
   function openQuick(){
     var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
     var qkLessons=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
-    var html='<h3>写一笔</h3>'+
+    var html='<div class="sheet-head"><span class="sheet-ico idea"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2Z"/></svg></span><div><h3>写一笔</h3></div></div>'+
+      '<div class="sub">哪个小朋友的课堂想法 / 玩法？记下来，属于 TA 一个人的「上课」。</div>'+
       '<div class="field"><label>选学生（点一下）</label><div class="chips" id="qk-pick">'+state.students.map(function(s){return '<span class="chip" data-pick="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
-      '<div class="field"><label>第几节</label><div class="chips" id="qk-less">'+qkLessons.map(function(n){return '<span class="chip" data-less="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
-      '<div class="rc-btns"><button class="rc-leave" data-act="qk-leave">请假</button><button class="rc-makeup" data-act="qk-makeup">已补课</button></div>';
+      '<div class="field"><label>第几节（可选）</label><div class="chips" id="qk-less">'+qkLessons.map(function(n){return '<span class="chip" data-less="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
+      '<div class="field"><label>突然冒出的想法 / 上课玩法</label><textarea id="qk-text" rows="4" placeholder="连读游戏：两人抢答接龙…"></textarea></div>'+
+      '<div class="rc-btns"><button class="rc-makeup" data-act="qk-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
     openModal(html);
   }
 
@@ -730,9 +754,15 @@
       ["lesson","parent","checkin"].forEach(function(mod){
         if(Array.isArray(d.person[mod])){
           state.settings.person[mod]=d.person[mod].map(function(r){
-            return {id:r.id||genId(), stuId:r.stuId, lesson:r.lesson!=null?Number(r.lesson):undefined, date:r.date||null, text:r.text||r.content||r.note||""};
+            return {id:r.id||genId(), stuId:r.stuId, lesson:r.lesson!=null?Number(r.lesson):undefined, date:r.date||null, text:r.text||r.content||r.note||"", idea:!!r.idea};
           });
         }
+      });
+    }
+    // 记一堂课：班级共同特点（班级级，独立存储）
+    if(Array.isArray(d.classTraits)){
+      state.settings.classTraits=d.classTraits.map(function(t){
+        return {id:t.id||genId(), classId:t.classId, lesson:t.lesson!=null?Number(t.lesson):undefined, date:t.date||null, text:t.text||t.content||t.note||""};
       });
     }
     // 兼容旧格式：classNotes / settings.classNotes / entries(type=上课) → 上课模块
@@ -765,6 +795,7 @@
       students:state.students, classes:state.classes, records:state.records,
       person:state.settings.person||{lesson:[],parent:[],checkin:[]},
       lessonNotes:state.settings.lessonNotes||{},
+      classTraits:state.settings.classTraits||[],
       progressNotes:state.settings.progressNotes||{},
       theme:state.settings.theme||"navy"
     },null,2)],{type:"application/json"});
@@ -797,8 +828,21 @@
       if(act==="rc-leave"){ var ce=curCell(); var nt=document.getElementById("rc-note")?document.getElementById("rc-note").value:""; if(ce) upsertRec(ce.stu,ce.lesson,true,null,nt); closeModal(); }
       else if(act==="rc-makeup"){ var ce2=curCell(); var dt=document.getElementById("rc-date").value||today(); var nt2=document.getElementById("rc-note")?document.getElementById("rc-note").value:""; if(ce2) upsertRec(ce2.stu,ce2.lesson,true,dt,nt2); closeModal(); }
       else if(act==="rc-clear"){ var ce3=curCell(); if(ce3) upsertRec(ce3.stu,ce3.lesson,false,null,null); closeModal(); }
-      else if(act==="dt-save"){ var dta=document.getElementById("dt-content"); if(_curDate){ var dk=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(!state.settings.lessonNotes) state.settings.lessonNotes={}; state.settings.lessonNotes[dk]=dta?dta.value.trim():""; save(); render(); closeModal(); } }
-      else if(act==="dt-clear"){ if(_curDate){ var dk2=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(state.settings.lessonNotes) delete state.settings.lessonNotes[dk2]; save(); render(); closeModal(); } }
+      else if(act==="dt-save"){
+        if(_curDate){
+          var dta=document.getElementById("dt-content");
+          var dk=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson;
+          if(!state.settings.lessonNotes) state.settings.lessonNotes={};
+          state.settings.lessonNotes[dk]=dta?dta.value.trim():"";
+          var tt=document.getElementById("dt-trait"); var tv=tt?tt.value.trim():"";
+          if(!state.settings.classTraits) state.settings.classTraits=[];
+          var ex=findTrait(_curDate.cid,_curDate.lesson);
+          if(tv){ if(ex){ ex.text=tv; } else { var tl=lesById(_curDate.cid,_curDate.lesson); state.settings.classTraits.push({id:genId(), classId:_curDate.cid, lesson:_curDate.lesson, date:tl?tl.date:null, text:tv}); } }
+          else if(ex){ state.settings.classTraits=state.settings.classTraits.filter(function(t){return t!==ex;}); }
+          save(); render(); closeModal();
+        }
+      }
+      else if(act==="dt-clear"){ if(_curDate){ var dk2=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(state.settings.lessonNotes) delete state.settings.lessonNotes[dk2]; if(state.settings.classTraits) state.settings.classTraits=state.settings.classTraits.filter(function(t){return !(t.classId===_curDate.cid && Number(t.lesson)===Number(_curDate.lesson));}); save(); render(); closeModal(); } }
       else if(act==="p-save"){
         var pmod=el.dataset.mod, pid=el.dataset.id;
         var pstu=document.getElementById("p-stu").value;
@@ -807,9 +851,8 @@
         var rec; if(pid){ rec=arr.find(function(r){return r.id===pid;}); if(!rec){ rec={id:pid}; arr.push(rec); } } else { rec={id:genId()}; arr.push(rec); }
         rec.stuId=pstu; rec.text=ptext;
         if(pmod==="lesson"){
-          var ples=Number(document.getElementById("p-les").value);
-          var pst=stuById(pstu), pcid=pst?pst.classId:null, pl=lesById(pcid,ples);
-          rec.lesson=ples; rec.date=pl?pl.date:null;
+          var plesv=document.getElementById("p-les").value;
+          if(plesv){ var ples=Number(plesv); var pst=stuById(pstu), pcid=pst?pst.classId:null, pl=lesById(pcid,ples); rec.lesson=ples; rec.date=pl?pl.date:null; }
         } else {
           rec.date=document.getElementById("p-date").value||today();
         }
@@ -822,19 +865,24 @@
       }
       else if(act==="lc-save"){
         var lp=document.querySelector("#lc-pick .chip.on"), ll=document.querySelector("#lc-less .chip.on");
-        if(!lp||!ll){ toast("先选学生和第几节"); return; }
-        var lstu=lp.dataset.lp, lles=Number(ll.dataset.ll);
-        var lst=stuById(lstu), lcid=lst?lst.classId:null, lrec=lesById(lcid,lles);
-        state.settings.person.lesson.push({id:genId(), stuId:lstu, lesson:lles, date:lrec?lrec.date:null, text:document.getElementById("lc-text").value.trim()});
-        save(); state.view="person"; state.subtab="lesson"; state.pstu=lstu; render(); closeModal(); toast("已记录到「上课」");
+        if(!lp||!ll){ toast("先选班级和第几节"); return; }
+        var cid=lp.dataset.lp, lles=Number(ll.dataset.ll);
+        var l=lesById(cid,lles), txt=document.getElementById("lc-text").value.trim();
+        if(!state.settings.classTraits) state.settings.classTraits=[];
+        var ex=findTrait(cid,lles);
+        if(ex){ ex.text=txt; } else { state.settings.classTraits.push({id:genId(), classId:cid, lesson:lles, date:l?l.date:null, text:txt}); }
+        save(); state.view="attend"; render(); closeModal(); toast("已记录这堂课的共同特点");
       }
       else if(act==="imp-file"){ var fi=document.createElement("input"); fi.type="file"; fi.accept=".json,application/json"; fi.onchange=function(){ if(fi.files[0]) importFromFile(fi.files[0]); }; fi.click(); }
       else if(act==="imp-go"){ var it=document.getElementById("imp-text"); parseImport(it?it.value:""); }
-      else if(act==="qk-leave"||act==="qk-makeup"){
-        var ps=document.querySelector("#qk-pick .chip.on"), pl=document.querySelector("#qk-less .chip.on");
-        if(!ps||!pl){ toast("先选学生和节次"); return; }
-        upsertRec(ps.dataset.pick, pl.dataset.less, true, act==="qk-makeup"?(document.getElementById("rc-date")?document.getElementById("rc-date").value:today()):null);
-        closeModal();
+      else if(act==="qk-save"){
+        var ps=document.querySelector("#qk-pick .chip.on");
+        if(!ps){ toast("先选一个学生"); return; }
+        var pl=document.querySelector("#qk-less .chip.on");
+        var qles=pl?Number(pl.dataset.less):null;
+        var qst=stuById(ps.dataset.pick), qcid=qst?qst.classId:null, ql=qles!=null?lesById(qcid,qles):null;
+        state.settings.person.lesson.push({id:genId(), stuId:ps.dataset.pick, lesson:qles, date:ql?ql.date:null, text:document.getElementById("qk-text").value.trim(), idea:true});
+        save(); state.view="person"; state.subtab="lesson"; state.pstu=ps.dataset.pick; render(); closeModal(); toast("已记下想法 ✦");
       }
       else if(act==="set-import"){ openImport(); }
       else if(act==="set-export"){ doExport(); }
