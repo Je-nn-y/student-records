@@ -53,8 +53,6 @@
     border-radius:0; padding:9px; font-size:14px; font-weight:800; cursor:pointer;
   }
   .segbar button.on{ background:var(--accent); color:#fff; border-color:transparent; }
-  .grid tbody td.cell.cnote{ height:auto; min-height:48px; vertical-align:top; text-align:left; padding:8px 6px; }
-  .cnote .cn{ display:block; font-size:11px; font-weight:600; color:var(--ink); line-height:1.55; }
   .marr{
     width:40px; height:40px; border-radius:0; border:none; cursor:pointer;
     background:var(--card); color:var(--accent2); font-size:22px; font-weight:700; line-height:40px;
@@ -173,28 +171,33 @@
   }
   .toast.show{opacity:1;}
   .hidden{display:none!important;}
-  /* 上课情况：按学生分条卡片，不再是表格（方便以后加“家长情况”） */
-  .cn-list{ padding:6px 10px 12px; }
-  .cn-class-h{ display:flex; align-items:center; gap:8px; margin:16px 2px 9px; font-weight:800; font-size:14px; color:var(--ink); }
-  .cn-dot{ width:10px; height:10px; border-radius:0; flex:0 0 auto; }
-  .cn-dot.cn-P2{ background:var(--blueD); }
-  .cn-dot.cn-L2{ background:var(--greenD); }
-  .cn-dot.cn-P4{ background:var(--yellowD); }
-  .cn-card{ background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); margin-bottom:13px; box-shadow:0 1px 4px rgba(0,0,0,.05); }
-  .cn-card.cn-P2{ border-left-color:var(--blueD); }
-  .cn-card.cn-L2{ border-left-color:var(--greenD); }
-  .cn-card.cn-P4{ border-left-color:var(--yellowD); }
-  .cn-card-h{ display:flex; align-items:center; justify-content:space-between; padding:11px 12px; border-bottom:1px solid var(--line); font-weight:800; font-size:15px; color:var(--ink); }
-  .cn-card-h .cn-cls{ font-size:11px; font-weight:800; padding:3px 11px; color:#fff; background:var(--accent); }
-  .cn-card.cn-P2 .cn-cls{ background:var(--blueD); color:#1f3a5f; }
-  .cn-card.cn-L2 .cn-cls{ background:var(--greenD); color:#1f4a36; }
-  .cn-card.cn-P4 .cn-cls{ background:var(--yellowD); color:#5a4a12; }
-  .cn-row{ display:flex; gap:11px; padding:11px 12px; border-top:1px solid var(--line); cursor:pointer; }
-  .cn-row:first-of-type{ border-top:none; }
-  .cn-row:active{ background:#F5F8FC; }
-  .cn-les{ flex:0 0 auto; min-width:60px; font-weight:800; font-size:12px; color:var(--muted); line-height:1.5; }
-  .cn-body{ flex:1; min-width:0; font-size:13px; line-height:1.6; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
-  .cn-body.empty{ color:var(--muted); font-size:12px; }
+  /* 个人情况：三模块子标签 + 记录列表（record-first，只显示写过的） */
+  .subseg{
+    position:sticky; top:102px; z-index:15;
+    display:flex; gap:8px; padding:7px 12px; background:var(--bg);
+    border-bottom:1px solid var(--line);
+  }
+  .subseg-btn{
+    flex:1; border:1.5px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:0; padding:9px; font-size:14px; font-weight:800; cursor:pointer;
+  }
+  .subseg-btn.on{ background:var(--accent); color:#fff; border-color:transparent; }
+  .person-wrap{ padding:8px 10px 14px; }
+  .pcard{ background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); margin-bottom:11px; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+  .pcard.pc-P2{ border-left-color:var(--blueD); }
+  .pcard.pc-L2{ border-left-color:var(--greenD); }
+  .pcard.pc-P4{ border-left-color:var(--yellowD); }
+  .pcard-h{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .pc-name{ font-weight:800; font-size:15px; color:var(--ink); }
+  .pc-tag{ font-size:11px; font-weight:800; padding:3px 10px; color:var(--muted); background:#F2F4F7; }
+  .pcard-body{ padding:11px 12px; font-size:13px; line-height:1.6; color:var(--ink); white-space:pre-wrap; word-break:break-word; cursor:pointer; }
+  .pcard-body:active{ background:#F5F8FC; }
+  .pempty{ padding:30px 16px; text-align:center; color:var(--muted); font-size:13px; line-height:1.7; }
+  .padd{
+    width:100%; margin-top:4px; border:1.5px dashed var(--line); background:#fff; color:var(--accent);
+    border-radius:0; padding:13px; font-size:14px; font-weight:800; cursor:pointer;
+  }
+  .padd:active{ background:#F5F8FC; }
   .field textarea#imp-text{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.6; }
 </style>
 </head>
@@ -208,7 +211,7 @@
   </div>
   <div class="segbar" id="views">
     <button data-action="switch-view" data-view="attend" class="on">出勤表</button>
-    <button data-action="switch-view" data-view="classnote">上课情况</button>
+    <button data-action="switch-view" data-view="person">个人情况</button>
   </div>
   <div class="months" id="months"></div>
   <div class="tbl-wrap" id="tbl"></div>
@@ -264,12 +267,16 @@
       {studentId:"mujj6bmkstc4h",lesson:6,leave:true,makeupDate:null},
       {studentId:"mui73c51chrs0",lesson:7,leave:true,makeupDate:null}
     ];
-    var state={ students:[], classes:[], records:[], view:"attend", settings:{
+    var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", settings:{
       theme:"navy",
       lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
-      classNotes:{},       // 上课情况笔记： "stuId|lesson" => "活泼松散，下节课要严格"
       progressNotes:{      // 每班进度备注（可自己改）
         l2:"L2班整体进度较其他班慢2节课（缺9.25、9.27内容）。安安缺2节，进度正好；欢欢额外缺10.5、10.6，共缺4节，比安安多落后2节。"
+      },
+      person:{             // 个人情况三模块（record-first，只显示写过的）
+        lesson:[],         // 上课： {id, stuId, lesson, date, text}
+        parent:[],         // 家长： {id, stuId, date, text}
+        checkin:[]         // 打卡： {id, stuId, date, text}
       }
     }, activeMonth:null };
 
@@ -279,6 +286,22 @@
       var r=JSON.parse(localStorage.getItem(KEY_REC)); if(Array.isArray(r)) state.records=r;
       var t=JSON.parse(localStorage.getItem(KEY_SET)); if(t&&typeof t==="object") state.settings=Object.assign(state.settings,t);
     }catch(e){}
+  }
+  function genId(){ return "r"+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
+  function migrateSettings(){
+    if(!state.settings.person) state.settings.person={lesson:[],parent:[],checkin:[]};
+    if(!state.settings.person.lesson) state.settings.person.lesson=[];
+    if(!state.settings.person.parent) state.settings.person.parent=[];
+    if(!state.settings.person.checkin) state.settings.person.checkin=[];
+    if(state.settings.classNotes && typeof state.settings.classNotes==="object"){
+      Object.keys(state.settings.classNotes).forEach(function(k){
+        var p=String(k).split("|"); if(p.length<2) return;
+        var stuId=p[0], les=Number(p[1]);
+        var stu=stuById(stuId), cid=stu?stu.classId:null, l=cid?lesById(cid,les):null;
+        state.settings.person.lesson.push({id:genId(), stuId:stuId, lesson:les, date:l?l.date:null, text:String(state.settings.classNotes[k]).trim()});
+      });
+      delete state.settings.classNotes;
+    }
   }
   function save(){
     try{
@@ -324,18 +347,20 @@
   function render(){
     document.documentElement.setAttribute("data-theme", state.settings.theme||"navy");
     var view=state.view||"attend";
+    var seg=document.getElementById("views");
+    if(seg){
+      seg.querySelectorAll("button[data-view]").forEach(function(b){ b.classList.toggle("on", b.dataset.view===view); });
+    }
+    var mh=document.getElementById("months");
+    if(view==="person"){ mh.style.display="none"; renderPerson(); return; }
+    mh.style.display="";
     var ms=months();
     if(!state.activeMonth || ms.indexOf(state.activeMonth)<0) state.activeMonth=ms[0]||today().slice(0,7);
-    var mh=document.getElementById("months");
     var idx=ms.indexOf(state.activeMonth);
     var prevM = idx>0 ? ms[idx-1] : "", nextM = idx<ms.length-1 ? ms[idx+1] : "";
     mh.innerHTML='<button class="marr'+(prevM?"":" dis")+'" data-action="switch-month" data-m="'+prevM+'">‹</button>'+
       '<span class="mcur">'+cnMonth(state.activeMonth)+'</span>'+
       '<button class="marr'+(nextM?"":" dis")+'" data-action="switch-month" data-m="'+nextM+'">›</button>';
-    var seg=document.getElementById("views");
-    if(seg){
-      seg.querySelectorAll("button[data-view]").forEach(function(b){ b.classList.toggle("on", b.dataset.view===view); });
-    }
     // 当月可见节次（所有班级去重排序）
     var visN={};
     Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ if(l.date.slice(0,7)===state.activeMonth) visN[l.n]=true; }); });
@@ -344,7 +369,6 @@
       document.getElementById("tbl").innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted);">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
       return;
     }
-    if(view==="classnote"){ renderClassnote(visLessons); return; }
     // —— 出勤表视图 ——
     var html='<table class="grid"><thead><tr><th class="corner"></th>';
     visLessons.forEach(function(n){ html+='<th><div class="ln">L'+n+'</div></th>'; });
@@ -395,33 +419,94 @@
     });
     document.getElementById("tbl").innerHTML=html;
   }
-  function classNote(stuId,lesson){ var k=stuId+"|"+lesson; return (state.settings.classNotes&&state.settings.classNotes[k])||""; }
-  function renderClassnote(visLessons){
-    var html='<div class="cn-list">';
-    classOrder().forEach(function(cid){
-      var stus=state.students.filter(function(s){return s.classId===cid;});
-      if(!stus.length) return;
-      var cname=className(cid);
-      var cs=classSched(cid).filter(function(l){return l.date.slice(0,7)===state.activeMonth;});
-      var dateOf={}; cs.forEach(function(l){ dateOf[l.n]=l.date; });
-      html+='<div class="cn-class-h"><span class="cn-dot cn-'+cname+'"></span>'+esc(cname)+' 班</div>';
-      stus.forEach(function(s){
-        html+='<div class="cn-card cn-'+cname+'">';
-        html+='<div class="cn-card-h"><span>'+esc(s.name)+'</span><span class="cn-cls">'+esc(cname)+' 班</span></div>';
-        html+='<div class="cn-rows">';
-        visLessons.forEach(function(n){
-          var txt=classNote(s.id,n);
-          var dt=dateOf[n]?fmtMD(dateOf[n]):'';
-          html+='<div class="cn-row" data-action="cnote" data-stu="'+s.id+'" data-lesson="'+n+'">'+
-            '<span class="cn-les">L'+n+(dt?' · '+dt:'')+'</span>'+
-            '<span class="cn-body'+(txt?'':' empty')+'">'+(txt?esc(txt):'点此写')+'</span>'+
-          '</div>';
-        });
-        html+='</div></div>';
-      });
-    });
+  function renderPerson(){
+    var sub=state.subtab||"lesson";
+    var tabs=[{k:"lesson",t:"上课"},{k:"parent",t:"家长"},{k:"checkin",t:"打卡"}];
+    var html='<div class="subseg">';
+    tabs.forEach(function(tb){ html+='<button class="subseg-btn'+(sub===tb.k?" on":"")+'" data-action="switch-sub" data-sub="'+tb.k+'">'+tb.t+'</button>'; });
+    html+='</div><div class="person-wrap">';
+    if(sub==="lesson") html+=personLesson();
+    else if(sub==="parent") html+=personList("parent","家长");
+    else html+=personList("checkin","打卡");
     html+='</div>';
     document.getElementById("tbl").innerHTML=html;
+  }
+  function addBtn(mod){
+    var label={lesson:"上课",parent:"家长",checkin:"打卡"}[mod]||"";
+    return '<button class="padd" data-action="padd" data-mod="'+mod+'">＋ 添加一条'+label+'</button>';
+  }
+  function emptyPerson(mod,msg){ return '<div class="pempty">'+esc(msg)+'</div>'+addBtn(mod); }
+  function personLesson(){
+    var arr=(state.settings.person.lesson||[]).slice();
+    arr.sort(function(a,b){
+      var sa=stuById(a.stuId), sb=stuById(b.stuId);
+      var ca=sa?classOrder().indexOf(sa.classId):-1, cb=sb?classOrder().indexOf(sb.classId):-1;
+      if(ca!==cb) return ca-cb;
+      var na=sa?sa.name:"", nb=sb?sb.name:"";
+      if(na!==nb) return na<nb?-1:1;
+      return (a.lesson||0)-(b.lesson||0);
+    });
+    if(!arr.length) return emptyPerson("lesson","还没有课堂记录，点右下角「记一堂课」或下面按钮添加。");
+    var html='';
+    arr.forEach(function(r){
+      var stu=stuById(r.stuId), cls=stu?className(stu.classId):"";
+      var dt=r.date?fmtMD(r.date):"";
+      html+='<div class="pcard pc-'+cls+'">'+
+        '<div class="pcard-h"><span class="pc-name">'+esc(stu?stu.name:"?")+'</span><span class="pc-tag">L'+r.lesson+(dt?' · '+dt:'')+'</span></div>'+
+        '<div class="pcard-body" data-action="pedit" data-mod="lesson" data-id="'+r.id+'">'+esc(r.text||'')+'</div>'+
+      '</div>';
+    });
+    html+=addBtn("lesson");
+    return html;
+  }
+  function personList(mod,label){
+    var arr=(state.settings.person[mod]||[]).slice();
+    arr.sort(function(a,b){ return (b.date||"")<(a.date||"")?-1:(b.date>(a.date||"")?1:0); });
+    if(!arr.length) return emptyPerson(mod,"还没有"+label+"记录，点下面按钮添加。");
+    var html='';
+    arr.forEach(function(r){
+      var stu=stuById(r.stuId), cls=stu?className(stu.classId):"";
+      var dt=r.date?fmtMD(r.date):"";
+      html+='<div class="pcard pc-'+cls+'">'+
+        '<div class="pcard-h"><span class="pc-name">'+esc(stu?stu.name:"?")+'</span>'+(dt?'<span class="pc-tag">'+dt+'</span>':'')+'</div>'+
+        '<div class="pcard-body" data-action="pedit" data-mod="'+mod+'" data-id="'+r.id+'">'+esc(r.text||'')+'</div>'+
+      '</div>';
+    });
+    html+=addBtn(mod);
+    return html;
+  }
+  function openPersonEdit(mod,id){
+    var isEdit=!!id;
+    var rec=isEdit?(state.settings.person[mod]||[]).find(function(r){return r.id===id;}):null;
+    var stuId=rec?rec.stuId:"";
+    var MODLABEL={lesson:"课堂记录",parent:"家长沟通",checkin:"打卡"}[mod]||"";
+    var html='<h3>'+(isEdit?"编辑":"添加")+MODLABEL+'</h3>';
+    html+='<div class="field"><label>学生</label><select id="p-stu">'+state.students.map(function(s){return '<option value="'+s.id+'"'+(s.id===stuId?" selected":"")+'>'+esc(s.name)+'</option>';}).join("")+'</select></div>';
+    if(mod==="lesson"){
+      var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
+      var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+      var defLes=rec?rec.lesson:"";
+      html+='<div class="field"><label>第几节</label><select id="p-les">'+less.map(function(n){return '<option value="'+n+'"'+(Number(defLes)===n?" selected":"")+'>L'+n+'</option>';}).join("")+'</select></div>';
+    } else {
+      html+='<div class="field"><label>日期</label><input type="date" id="p-date" value="'+(rec?rec.date:today())+'"></div>';
+    }
+    html+='<div class="field"><label>内容</label><textarea id="p-text" rows="4" placeholder="'+(mod==="checkin"?"一句话，如：完成打卡":"写点什么…")+'">'+esc(rec?rec.text||'':'')+'</textarea></div>';
+    html+='<div class="rc-btns">'+
+      '<button class="rc-makeup" data-act="p-save" data-mod="'+mod+'"'+(isEdit?' data-id="'+id+'"':'')+'>保存</button>'+
+      (isEdit?'<button class="rc-clear" data-act="p-del" data-mod="'+mod+'" data-id="'+id+'">删除</button>':'')+
+      '<button class="rc-clear" data-act="close-modal">取消</button>'+
+    '</div>';
+    openModal(html);
+  }
+  function openLessonCapture(){
+    var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
+    var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+    var html='<h3>记一堂课</h3>'+
+      '<div class="field"><label>学生</label><select id="lc-stu">'+state.students.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join("")+'</select></div>'+
+      '<div class="field"><label>第几节</label><select id="lc-les">'+less.map(function(n){return '<option value="'+n+'">L'+n+'</option>';}).join("")+'</select></div>'+
+      '<div class="field"><label>这节课情况</label><textarea id="lc-text" rows="4" placeholder="活泼松散，下节课要严格"></textarea></div>'+
+      '<div class="rc-btns"><button class="rc-makeup" data-act="lc-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
+    openModal(html);
   }
 
   var _cur=null, _curDate=null;
@@ -449,19 +534,6 @@
       '<div class="rc-btns">'+
         '<button class="rc-makeup" data-act="dt-save">保存</button>'+
         (cur?'<button class="rc-clear" data-act="dt-clear">清除这一格内容</button>':'')+
-      '</div>';
-    openModal(html);
-  }
-
-  function openClassNote(stuId,lesson){
-    _cur={stu:stuId,lesson:lesson};
-    var stu=stuById(stuId), cid=stu?stu.classId:null, les=lesById(cid,lesson), cur=classNote(stuId,lesson);
-    var html='<h3>'+esc(stu?stu.name:"")+' · 第'+lesson+'节 上课情况</h3>'+
-      (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
-      '<div class="field"><label>这节课情况（写一两句，如：活泼松散，下节课要严格）</label><textarea id="cn-content" rows="4" placeholder="活泼松散，下节课要严格">'+esc(cur)+'</textarea></div>'+
-      '<div class="rc-btns">'+
-        '<button class="rc-makeup" data-act="cn-save">保存</button>'+
-        (cur?'<button class="rc-clear" data-act="cn-clear">清除这一格</button>':'')+
       '</div>';
     openModal(html);
   }
@@ -547,17 +619,30 @@
       });
       state.records=recs;
     }
-    // 上课情况笔记：吸收 当前 classNotes / settings.classNotes / 旧 entries(type=上课)
-    var cn={};
-    function addCN(k,v){ if(k&&v!=null&&String(v).trim()) cn[k]=String(v).trim(); }
-    if(d.classNotes&&typeof d.classNotes==="object"){ Object.keys(d.classNotes).forEach(function(k){ addCN(k,d.classNotes[k]); }); }
-    if(d.settings&&d.settings.classNotes&&typeof d.settings.classNotes==="object"){ Object.keys(d.settings.classNotes).forEach(function(k){ addCN(k,d.settings.classNotes[k]); }); }
-    if(Array.isArray(d.entries)){
-      d.entries.forEach(function(e){
-        if(e.type==="上课"&&e.studentId&&e.lesson!=null&&e.lesson!==""){ addCN(e.studentId+"|"+e.lesson, e.note||e.content||e.text||e.detail||e.remark||e.desc||""); }
+    // 个人情况三模块：优先用新格式 d.person（只覆盖文件中出现的模块）
+    if(d.person && typeof d.person==="object"){
+      ["lesson","parent","checkin"].forEach(function(mod){
+        if(Array.isArray(d.person[mod])){
+          state.settings.person[mod]=d.person[mod].map(function(r){
+            return {id:r.id||genId(), stuId:r.stuId, lesson:r.lesson!=null?Number(r.lesson):undefined, date:r.date||null, text:r.text||r.content||r.note||""};
+          });
+        }
       });
     }
-    if(Object.keys(cn).length) state.settings.classNotes=cn;
+    // 兼容旧格式：classNotes / settings.classNotes / entries(type=上课) → 上课模块
+    var legacyLesson=[];
+    function addLegacy(stuId,les,date,text){
+      if(!stuId||les==null||les==="") return;
+      if(text!=null&&String(text).trim()) legacyLesson.push({id:genId(), stuId:stuId, lesson:Number(les), date:date||null, text:String(text).trim()});
+    }
+    if(d.classNotes&&typeof d.classNotes==="object"){ Object.keys(d.classNotes).forEach(function(k){ var p=k.split("|"); addLegacy(p[0],p[1],null,d.classNotes[k]); }); }
+    if(d.settings&&d.settings.classNotes&&typeof d.settings.classNotes==="object"){ Object.keys(d.settings.classNotes).forEach(function(k){ var p=k.split("|"); addLegacy(p[0],p[1],null,d.settings.classNotes[k]); }); }
+    if(Array.isArray(d.entries)){
+      d.entries.forEach(function(e){
+        if(e.type==="上课"&&e.studentId){ addLegacy(e.studentId, e.lesson, e.date||null, e.note||e.content||e.text||e.detail||e.remark||e.desc||""); }
+      });
+    }
+    if(legacyLesson.length) state.settings.person.lesson=(state.settings.person.lesson||[]).concat(legacyLesson);
     // 顺手把其它用户数据也吸收（避免导出再导入丢内容）
     if(d.settings){
       if(d.settings.lessonNotes&&typeof d.settings.lessonNotes==="object") state.settings.lessonNotes=d.settings.lessonNotes;
@@ -567,12 +652,12 @@
     if(d.lessonNotes&&typeof d.lessonNotes==="object") state.settings.lessonNotes=d.lessonNotes;
     if(d.progressNotes&&typeof d.progressNotes==="object") state.settings.progressNotes=d.progressNotes;
     save(); render(); closeModal(); closePop();
-    toast("导入成功（上课情况已保留）");
+    toast("导入成功（上课/家长/打卡已保留）");
   }
   function doExport(){
     var blob=new Blob([JSON.stringify({
       students:state.students, classes:state.classes, records:state.records,
-      classNotes:state.settings.classNotes||{},
+      person:state.settings.person||{lesson:[],parent:[],checkin:[]},
       lessonNotes:state.settings.lessonNotes||{},
       progressNotes:state.settings.progressNotes||{},
       theme:state.settings.theme||"navy"
@@ -591,10 +676,12 @@
       else if(a==="switch-view"){ state.view=el.dataset.view; render(); }
       else if(a==="switch-month"){ if(!el.dataset.m) return; state.activeMonth=el.dataset.m; render(); }
       else if(a==="cell"){ openCell(el.dataset.stu, el.dataset.lesson); }
-      else if(a==="cnote"){ openClassNote(el.dataset.stu, el.dataset.lesson); }
       else if(a==="date"){ openDate(el.dataset.cid, el.dataset.lesson); }
+      else if(a==="switch-sub"){ state.subtab=el.dataset.sub; render(); }
       else if(a==="open-quick"){ openQuick(); }
-      else if(a==="open-lesson"){ state.view="classnote"; render(); toast("在「上课情况」点学生那行写"); }
+      else if(a==="open-lesson"){ openLessonCapture(); }
+      else if(a==="padd"){ openPersonEdit(el.dataset.mod, null); }
+      else if(a==="pedit"){ openPersonEdit(el.dataset.mod, el.dataset.id); }
       return;
     }
     if(el.dataset.act){
@@ -604,8 +691,33 @@
       else if(act==="rc-clear"){ var ce3=curCell(); if(ce3) upsertRec(ce3.stu,ce3.lesson,false,null,null); closeModal(); }
       else if(act==="dt-save"){ var dta=document.getElementById("dt-content"); if(_curDate){ var dk=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(!state.settings.lessonNotes) state.settings.lessonNotes={}; state.settings.lessonNotes[dk]=dta?dta.value.trim():""; save(); render(); closeModal(); } }
       else if(act==="dt-clear"){ if(_curDate){ var dk2=(className(_curDate.cid)||"").toLowerCase()+"|"+_curDate.lesson; if(state.settings.lessonNotes) delete state.settings.lessonNotes[dk2]; save(); render(); closeModal(); } }
-      else if(act==="cn-save"){ var cta=document.getElementById("cn-content"); if(_cur){ var ck=_cur.stu+"|"+_cur.lesson; if(!state.settings.classNotes) state.settings.classNotes={}; state.settings.classNotes[ck]=cta?cta.value.trim():""; save(); render(); closeModal(); } }
-      else if(act==="cn-clear"){ if(_cur){ var ck2=_cur.stu+"|"+_cur.lesson; if(state.settings.classNotes) delete state.settings.classNotes[ck2]; save(); render(); closeModal(); } }
+      else if(act==="p-save"){
+        var pmod=el.dataset.mod, pid=el.dataset.id;
+        var pstu=document.getElementById("p-stu").value;
+        var ptext=document.getElementById("p-text").value.trim();
+        var arr=state.settings.person[pmod]; if(!arr) arr=state.settings.person[pmod]=[];
+        var rec; if(pid){ rec=arr.find(function(r){return r.id===pid;}); if(!rec){ rec={id:pid}; arr.push(rec); } } else { rec={id:genId()}; arr.push(rec); }
+        rec.stuId=pstu; rec.text=ptext;
+        if(pmod==="lesson"){
+          var ples=Number(document.getElementById("p-les").value);
+          var pst=stuById(pstu), pcid=pst?pst.classId:null, pl=lesById(pcid,ples);
+          rec.lesson=ples; rec.date=pl?pl.date:null;
+        } else {
+          rec.date=document.getElementById("p-date").value||today();
+        }
+        save(); state.view="person"; state.subtab=pmod; render(); closeModal(); toast("已保存");
+      }
+      else if(act==="p-del"){
+        var dmod=el.dataset.mod, did=el.dataset.id;
+        state.settings.person[dmod]=state.settings.person[dmod].filter(function(r){return r.id!==did;});
+        save(); render(); closeModal(); toast("已删除");
+      }
+      else if(act==="lc-save"){
+        var lstu=document.getElementById("lc-stu").value, lles=Number(document.getElementById("lc-les").value);
+        var lst=stuById(lstu), lcid=lst?lst.classId:null, ll=lesById(lcid,lles);
+        state.settings.person.lesson.push({id:genId(), stuId:lstu, lesson:lles, date:ll?ll.date:null, text:document.getElementById("lc-text").value.trim()});
+        save(); state.view="person"; state.subtab="lesson"; render(); closeModal(); toast("已记录到「上课」");
+      }
       else if(act==="imp-file"){ var fi=document.createElement("input"); fi.type="file"; fi.accept=".json,application/json"; fi.onchange=function(){ if(fi.files[0]) importFromFile(fi.files[0]); }; fi.click(); }
       else if(act==="imp-go"){ var it=document.getElementById("imp-text"); parseImport(it?it.value:""); }
       else if(act==="qk-leave"||act==="qk-makeup"){
@@ -638,6 +750,7 @@
 
     load();
     if(!state.students.length) seedDefault();
+    migrateSettings();
     render();
 })();
 </script>
