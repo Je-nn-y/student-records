@@ -337,6 +337,30 @@
       state.classes=DEFAULT_CLS.slice();
       state.records=DEFAULT_REC.slice();
     }
+    // 个人情况三模块为空时，填一批示例数据方便参考（只填这三个，不动出勤/学生；一旦有真实数据就不再填）
+    function seedPersonDemo(){
+      var p=state.settings.person;
+      if(!p) return;
+      if(p.lesson.length || p.parent.length || p.checkin.length) return;
+      function L(stuId,lesson,date,text){ p.lesson.push({id:genId(),stuId:stuId,lesson:lesson,date:date,text:text}); }
+      function P(stuId,date,text){ p.parent.push({id:genId(),stuId:stuId,date:date,text:text}); }
+      function C(stuId,date,text){ p.checkin.push({id:genId(),stuId:stuId,date:date,text:text}); }
+      // 上课
+      L("mui5amxt6b271",1,"2026-09-05","第一节课，基础音还行，但连读偏弱，后面多练。");
+      L("mui69ry8inj7k",1,"2026-09-06","开口积极，单词拼读准确率提高，节奏稳了。");
+      L("muji4w9yjj5qj",3,"2026-09-25","注意力容易飘，需多次提醒；元音发音有进步。");
+      L("muji4w9yc9uu2",2,"2026-09-13","跟读很认真，但自主拼读慢，回家要加练。");
+      L("mujj6bmkstc4h",5,"2026-10-01","整节课状态好，长句能完整读下来。");
+      // 家长
+      P("mui69ry8inj7k","2026-09-08","妈妈反馈在家愿意开口读了，作业完成度提升。");
+      P("muji4w9yjj5qj","2026-09-26","爸爸说孩子喜欢上课，希望多鼓励表达。");
+      P("mui5amxt6b271","2026-10-07","妈妈问国庆后能否加一节，已记录待排。");
+      // 打卡
+      C("mui73c51chrs0","2026-09-10","完成打卡：每日跟读15分钟。");
+      C("mujm0g2ttftny","2026-09-12","完成打卡：拼读练习2页。");
+      C("mujj6bmkstc4h","2026-09-15","完成打卡：录音作业已提交。");
+      save();
+    }
     function months(){
       var set={};
       Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ set[l.date.slice(0,7)]=true; }); });
@@ -751,6 +775,7 @@
     load();
     if(!state.students.length) seedDefault();
     migrateSettings();
+    seedPersonDemo();
     render();
 })();
 </script>
