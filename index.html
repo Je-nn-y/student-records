@@ -879,10 +879,23 @@
     closePop();
     var cfg=readSyncCfg();
     var html='<h3>同步</h3>'+
-      '<div class="sub">填下面这一个「同步码」（其实就是你的 GitHub 钥匙）。上传，就把数据存到你自己的私人云端；换手机 / 电脑，打开这里填同一个码、点「下载」就取回来。数据只存在你自己的 GitHub 里。下载会用云端版本覆盖当前手机数据。</div>'+
+      '<div class="sub">填下面这一个「同步码」（其实就是你的 GitHub 钥匙，你已经有了 GitHub 账号，不用新注册）。上传，就把数据存到你自己的私人云端；换手机 / 电脑，打开这里填同一个码、点「下载」就取回来。数据只存在你自己的 GitHub 里。下载会用云端版本覆盖当前手机数据。</div>'+
       '<div class="field"><label>同步码（你的 GitHub 钥匙，只填这一次，自动记住）</label><input id="sync-token" type="password" value="'+esc(cfg.token||"")+'" placeholder="粘贴你的 GitHub token（gist 权限）"></div>'+
-      '<details class="sync-help"><summary>怎么拿这个码（GitHub 钥匙）？</summary>'+
-      '<div class="sync-help-body">打开 github.com → 右上角头像 → Settings → 最下面 Developer settings → Personal access tokens → Tokens (classic) → Generate new token → 只勾 <b>gist</b> → 生成后复制那一长串粘进来。钥匙只存在你手机，不会外传。换设备时，把这一长串再粘一次就行。</div></details>'+
+      '<details class="sync-help"><summary>怎么拿这个码（GitHub 钥匙）？点开看详细步骤</summary>'+
+      '<div class="sync-help-body">'+
+      '你已经有 GitHub 账号了（就是之前放网页那个 jenny 的账号），所以<b>不用注册新账号</b>，只是去生成一把「钥匙」让 App 帮你存数据。<br><br>'+
+      '<b>建议用电脑做这一步</b>（屏幕大好操作），手机只负责粘贴钥匙 + 上传 / 下载。<br><br>'+
+      '<b>第 1 步</b>：打开 <b>github.com</b>（手机用浏览器最上方的<b>地址栏</b>输入，别粘到中间的搜索框）。登录你的账号。<br>'+
+      '<b>第 2 步</b>：右上角点头像 → 点 <b>Settings</b>。<br>'+
+      '<b>第 3 步</b>：左边最下面点 <b>Developer settings</b>。<br>'+
+      '<b>第 4 步</b>：点 <b>Personal access tokens</b> → <b>Tokens (classic)</b>。<br>'+
+      '<b>第 5 步</b>：点绿色按钮 <b>Generate new token (classic)</b>。<br>'+
+      '<b>第 6 步</b>：Note 随便写（比如「学生记录同步」）；Expiration 选最长或 <b>No expiration</b>（不想老换就选它）；<b>权限只勾 gist 这一项</b>，别的都不用管。<br>'+
+      '<b>第 7 步</b>：拉到最下面点 <b>Generate token</b>。<br>'+
+      '<b>第 8 步</b>：出来的那一长串（以 <b>ghp_</b> 开头）<b>立刻复制</b>！它只显示这一次，关掉页面就再也看不到了。<br><br>'+
+      '回到这个 App → 设置 → 同步 → 把那串粘进框 → 点「上传」。<br>'+
+      '钥匙只存在你手机本地，不会外传。换设备时，把这一长串再粘一次、点「下载」就行。'+
+      '</div></details>'+
       '<div class="rc-btns">'+
         '<button class="rc-makeup" data-act="sync-up">上传（存到云端）</button>'+
         '<button class="rc-leave" data-act="sync-down">下载（取回数据）</button>'+
