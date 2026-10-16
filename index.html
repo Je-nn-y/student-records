@@ -159,6 +159,10 @@
   .rc-leave{background:#FF4D6D;}
   .rc-makeup{background:#0EA371;}
   .rc-clear{background:transparent; color:var(--muted); border:1px solid var(--line);}
+  .sync-help{margin:4px 0 10px; font-size:12px; color:var(--muted);}
+  .sync-help summary{cursor:pointer; font-weight:600; user-select:none;}
+  .sync-help-body{margin-top:7px; line-height:1.65; background:var(--bg); padding:9px 11px; border-radius:9px; border:1px solid var(--line);}
+  .sync-msg{margin-top:11px; font-size:13px; color:var(--accent); min-height:18px; line-height:1.5;}
   .chips{display:flex; flex-wrap:wrap; gap:8px;}
   .chip{
     border:1.5px solid var(--line); background:#fff; border-radius:11px; padding:9px 13px;
@@ -864,6 +868,79 @@
     var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="student-records.json"; a.click();
     toast("已导出"); closePop();
   }
+  // ===== 同步（GitHub 私人 Gist，按同步码隔离，数据只在用户自己的 GitHub 里）=====
+  function readSyncCfg(){ try{ return JSON.parse(localStorage.getItem("sr_sync_cfg"))||{}; }catch(e){ return {}; } }
+  function saveSyncCfg(o){ var c=readSyncCfg(); for(var k in o){ if(o.hasOwnProperty(k)) c[k]=o[k]; } localStorage.setItem("sr_sync_cfg",JSON.stringify(c)); }
+  function githubApi(method,url,token,body){
+    return fetch(url,{method:method,headers:{"Authorization":"token "+token,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); var ct=r.headers.get("content-type")||""; return ct.indexOf("application/json")>=0?r.json():r.text(); });
+  }
+  function openSync(){
+    closePop();
+    var cfg=readSyncCfg();
+    var safeCode=(cfg.code||"").replace(/[^A-Za-z0-9_]/g,"");
+    var html='<h3>同步</h3>'+
+      '<div class="sub">把这份数据存到你自己的私人云端，换手机 / 电脑，输同一个「同步码」就能取回来。数据只存在你自己的 GitHub 里，不给别人看。下载会用云端版本覆盖当前手机上的数据。</div>'+
+      '<div class="field"><label>同步码（自己定，比如 jenny）</label><input id="sync-code" type="text" value="'+esc(safeCode)+'" placeholder="自己定一个，记住它"></div>'+
+      '<div class="field"><label>GitHub 钥匙（第一次填，之后自动记住）</label><input id="sync-token" type="password" value="" placeholder="粘贴你的 GitHub token（gist 权限）"></div>'+
+      '<details class="sync-help"><summary>怎么拿 GitHub 钥匙？</summary>'+
+      '<div class="sync-help-body">打开 github.com → 右上角头像 → Settings → 最下面 Developer settings → Personal access tokens → Tokens (classic) → Generate new token → 只勾 <b>gist</b> → 生成后复制那一长串粘进来。钥匙只存在你手机，不会外传。</div></details>'+
+      '<div class="rc-btns">'+
+        '<button class="rc-makeup" data-act="sync-up">上传（存到云端）</button>'+
+        '<button class="rc-leave" data-act="sync-down">下载（取回数据）</button>'+
+        '<button class="rc-clear" data-act="close-modal">取消</button>'+
+      '</div>'+
+      '<div id="sync-msg" class="sync-msg"></div>';
+    openModal(html);
+  }
+  function syncMsg(t){ var m=document.getElementById("sync-msg"); if(m) m.textContent=t; }
+  function uploadSync(){
+    var code=document.getElementById("sync-code").value.trim().replace(/[^A-Za-z0-9_]/g,"");
+    var token=document.getElementById("sync-token").value.trim();
+    if(!code){ syncMsg("先填同步码"); return; }
+    if(!token){ syncMsg("先填 GitHub 钥匙"); return; }
+    var cfg=readSyncCfg(); cfg.code=code; cfg.token=token; saveSyncCfg(cfg);
+    var data={students:state.students,classes:state.classes,records:state.records,
+      person:state.settings.person||{lesson:[],parent:[],checkin:[]},
+      lessonNotes:state.settings.lessonNotes||{},classTraits:state.settings.classTraits||[],
+      progressNotes:state.settings.progressNotes||{},theme:state.settings.theme||"navy"};
+    var payload=JSON.stringify(data,null,2);
+    syncMsg("上传中…");
+    if(cfg.gistId){
+      githubApi("PATCH","https://api.github.com/gists/"+cfg.gistId,token,{files:{["sync_"+code+".json"]:{content:payload}}})
+        .then(function(res){ if(res&&res.id) saveSyncCfg({gistId:res.id}); syncMsg("已上传到你的私人云端 ✦"); toast("已同步上传"); closeModal(); })
+        .catch(function(e){ syncMsg("上传失败："+(e.message||e)+"（检查钥匙是否填对、有没有勾 gist 权限）"); });
+    } else {
+      githubApi("POST","https://api.github.com/gists",token,{description:"sr-sync:"+code,public:false,files:{["sync_"+code+".json"]:{content:payload}}})
+        .then(function(res){ if(res&&res.id) saveSyncCfg({gistId:res.id}); syncMsg("已上传到你的私人云端 ✦"); toast("已同步上传"); closeModal(); })
+        .catch(function(e){ syncMsg("上传失败："+(e.message||e)+"（检查钥匙是否填对、有没有勾 gist 权限）"); });
+    }
+  }
+  function downloadSync(){
+    var code=document.getElementById("sync-code").value.trim().replace(/[^A-Za-z0-9_]/g,"");
+    var token=document.getElementById("sync-token").value.trim();
+    if(!code){ syncMsg("先填同步码"); return; }
+    if(!token){ syncMsg("先填 GitHub 钥匙"); return; }
+    var cfg=readSyncCfg(); cfg.code=code; cfg.token=token; saveSyncCfg(cfg);
+    syncMsg("下载中…");
+    function take(id){
+      githubApi("GET","https://api.github.com/gists/"+id,token).then(function(g){
+        var fn=Object.keys(g.files||{}).find(function(f){return f.indexOf("sync_")===0;});
+        if(!fn){ syncMsg("这个同步码没有数据"); return; }
+        saveSyncCfg({gistId:id});
+        syncMsg("已取回，正在载入…");
+        parseImport(g.files[fn].content);
+      }).catch(function(e){ syncMsg("下载失败："+(e.message||e)); });
+    }
+    if(cfg.gistId){ take(cfg.gistId); }
+    else {
+      githubApi("GET","https://api.github.com/gists",token).then(function(list){
+        var found=(list||[]).find(function(g){return g.description==="sr-sync:"+code;});
+        if(!found){ syncMsg("没找到「"+code+"」对应的数据，确认同步码或先上传一次"); return; }
+        take(found.id);
+      }).catch(function(e){ syncMsg("下载失败："+(e.message||e)); });
+    }
+  }
 
   document.addEventListener("click",function(ev){
     var el=ev.target.closest("[data-action],[data-act],[data-theme],[data-pick],[data-less],[data-lp],[data-ll],[data-ls],[data-m]");
@@ -959,9 +1036,11 @@
         save(); state.view="person"; state.subtab="lesson"; state.pstu=stuId; render(); closeModal(); toast("已记下想法 ✦");
       }
       else if(act==="set-import"){ openImport(); }
+      else if(act==="sync-up"){ uploadSync(); }
+      else if(act==="sync-down"){ downloadSync(); }
       else if(act==="set-export"){ doExport(); }
       else if(act==="set-recycle"){ toast("回收站（后续做）"); }
-      else if(act==="set-sync"){ toast("同步（后续做）"); }
+      else if(act==="set-sync"){ openSync(); }
       else if(act==="set-close"){ closePop(); }
       else if(act==="close-modal"){ closeModal(); }
       return;
