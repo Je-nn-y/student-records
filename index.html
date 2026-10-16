@@ -671,19 +671,18 @@
     var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
     var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
     var html='<div class="sheet-head"><span class="sheet-ico lesson"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><div><h3>记一堂课</h3></div></div>'+
-      '<div class="sub">选班级 → 点一下班级，下方会出现该班小朋友；勾选在场的人（请假的别选），记下共同特点。</div>'+
-      '<div class="field"><label>选班级</label><div class="chips" id="lc-pick">'+state.classes.map(function(c){return '<span class="chip" data-lp="'+c.id+'">'+esc(className(c.id))+' 班</span>';}).join("")+'</div></div>'+
+      '<div class="field"><label>班级</label><div class="chips" id="lc-pick">'+state.classes.map(function(c){return '<span class="chip" data-lp="'+c.id+'">'+esc(className(c.id))+' 班</span>';}).join("")+'</div></div>'+
       '<div class="field"><label>第几节</label><div class="chips" id="lc-less">'+less.map(function(n){return '<span class="chip" data-ll="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
-      '<div class="field"><label>在场的小朋友（点一下勾选，请假的别选）</label><div id="lc-students"><div class="free-hint">先选上面的班级，这里会出现该班小朋友</div></div></div>'+
-      '<div class="field"><label>这堂课同学们的共同特点</label><textarea id="lc-text" rows="4" placeholder="整体活跃，拼读普遍偏弱，三个孩子抢着回答…"></textarea></div>'+
+      '<div class="field"><label>在场的小朋友</label><div id="lc-students"></div></div>'+
+      '<div class="field"><label>共同特点</label><textarea id="lc-text" rows="4" placeholder="整体活跃，拼读普遍偏弱…"></textarea></div>'+
       '<div class="rc-btns"><button class="rc-makeup" data-act="lc-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
     openModal(html);
   }
   function renderLessonStudents(cid){
     var box=document.getElementById("lc-students"); if(!box) return;
-    if(!cid){ box.innerHTML='<div class="free-hint">先选上面的班级，这里会出现该班小朋友</div>'; return; }
+    if(!cid){ box.innerHTML=''; return; }
     var stus=state.students.filter(function(s){return s.classId===cid;});
-    if(!stus.length){ box.innerHTML='<div class="free-hint">这个班还没有学生</div>'; return; }
+    if(!stus.length){ box.innerHTML=''; return; }
     box.innerHTML='<div class="chips">'+stus.map(function(s){return '<span class="chip" data-ls="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div>';
   }
   // 芯片选择：multi=true 各自开关；否则单选，且再点一下可取消
@@ -701,8 +700,8 @@
     var stu=stuById(stuId), cid=stu?stu.classId:null, les=lesById(cid,lesson), rec=getRec(stuId,lesson);
     var html='<h3>'+esc(stu?stu.name:"")+' · 第'+lesson+'节</h3>'+
       (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
-      '<div class="field"><label>补课日期（标“已补”用，默认今天）</label><input type="date" id="rc-date" value="'+today()+'"></div>'+
-      '<div class="field"><label>格子小字备注（可选，如：复习A和E）</label><input type="text" id="rc-note" value="'+esc(rec?rec.note||'':'')+'" placeholder="复习A和E"></div>'+
+      '<div class="field"><label>补课日期</label><input type="date" id="rc-date" value="'+today()+'"></div>'+
+      '<div class="field"><label>格子小字备注</label><input type="text" id="rc-note" value="'+esc(rec?rec.note||'':'')+'" placeholder="复习A和E"></div>'+
       '<div class="rc-btns">'+
         '<button class="rc-leave" data-act="rc-leave">标记请假（红叉）</button>'+
         '<button class="rc-makeup" data-act="rc-makeup">标记已补课（绿字）</button>'+
@@ -720,9 +719,9 @@
     }).join("");
     var html='<div class="sheet-head"><span class="sheet-ico lesson"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><div><h3>'+esc(className(cid))+' 班 · 第'+lesson+'节</h3></div></div>'+
       (les?'<div class="sub">'+les.date+'（'+fmtMD(les.date)+'）</div>':'')+
-      '<div class="field"><label>当天上的课（写简短，如：复习A和E）</label><textarea id="dt-content" rows="3" placeholder="复习A和E / 字母组合 oi,oy…">'+esc(cur)+'</textarea></div>'+
-      '<div class="field"><label>这堂课同学们的共同特点（记一堂课）</label><textarea id="dt-trait" rows="3" placeholder="整体活跃 / 拼读普遍偏弱 / 三个孩子抢着回答…">'+esc(trait?trait.text:'')+'</textarea></div>'+
-      '<div class="field"><label>在场的小朋友（点一下勾选，请假的别选）</label><div class="chips" id="dt-students">'+stuChips+'</div></div>'+
+      '<div class="field"><label>当天上的课</label><textarea id="dt-content" rows="3" placeholder="复习A和E / 字母组合 oi,oy…">'+esc(cur)+'</textarea></div>'+
+      '<div class="field"><label>共同特点</label><textarea id="dt-trait" rows="3" placeholder="整体活跃 / 拼读普遍偏弱…">'+esc(trait?trait.text:'')+'</textarea></div>'+
+      '<div class="field"><label>在场的小朋友</label><div class="chips" id="dt-students">'+stuChips+'</div></div>'+
       '<div class="rc-btns">'+
         '<button class="rc-makeup" data-act="dt-save">保存</button>'+
         ((cur||trait)?'<button class="rc-clear" data-act="dt-clear">清除这一格</button>':'')+
@@ -734,10 +733,9 @@
     var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
     var qkLessons=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
     var html='<div class="sheet-head"><span class="sheet-ico idea"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2Z"/></svg></span><div><h3>写一笔</h3></div></div>'+
-      '<div class="sub">哪个小朋友的课堂想法 / 玩法？记下来，属于 TA 一个人的「上课」。</div>'+
-      '<div class="field"><label>选学生（点一下）</label><div class="chips" id="qk-pick">'+state.students.map(function(s){return '<span class="chip" data-pick="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
-      '<div class="field"><label>第几节（可选）</label><div class="chips" id="qk-less">'+qkLessons.map(function(n){return '<span class="chip" data-less="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
-      '<div class="field"><label>突然冒出的想法 / 上课玩法</label><textarea id="qk-text" rows="4" placeholder="连读游戏：两人抢答接龙…"></textarea></div>'+
+      '<div class="field"><label>学生</label><div class="chips" id="qk-pick">'+state.students.map(function(s){return '<span class="chip" data-pick="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
+      '<div class="field"><label>第几节</label><div class="chips" id="qk-less">'+qkLessons.map(function(n){return '<span class="chip" data-less="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
+      '<div class="field"><label>想法</label><textarea id="qk-text" rows="4" placeholder="突然冒出的想法 / 上课玩法…"></textarea></div>'+
       '<div class="rc-btns"><button class="rc-makeup" data-act="qk-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
     openModal(html);
   }
