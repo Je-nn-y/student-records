@@ -114,6 +114,24 @@
   .pnote-h{ font-weight:800; font-size:13px; color:var(--ink); margin-bottom:8px; }
   .pnote-area{ width:100%; min-height:66px; border:1.5px solid var(--line); border-radius:0; padding:10px;
     font-size:13px; line-height:1.8; font-family:inherit; color:var(--ink); background:#fff; resize:vertical; }
+  .add-lesson-wrap{ padding:10px 10px 4px; }
+  .add-lesson-btn{ width:100%; padding:13px; border:2px dashed var(--accent); background:transparent; color:var(--accent);
+    font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .add-lesson-btn:active{ background:var(--accent); color:#fff; }
+  .al-list{ margin-top:14px; border-top:1px solid var(--line); padding-top:10px; }
+  .al-list-h{ font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .al-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; font-size:13px; }
+  .al-del{ width:28px; height:28px; border:1px solid var(--line); background:#fff; color:var(--x); font-size:16px; line-height:1; cursor:pointer; flex:0 0 auto; }
+  .al-rows{ margin-top:6px; }
+  .al-row{ display:flex; align-items:center; gap:8px; padding:9px 4px; border-bottom:1px solid var(--line); font-size:14px; }
+  .al-check{ width:26px; height:26px; border:2px solid var(--accent); color:var(--accent); font-size:15px; line-height:22px; text-align:center; cursor:pointer; flex:0 0 auto; background:#fff; }
+  .al-check:not(.on){ color:transparent; border-color:var(--line); }
+  .al-name{ font-weight:700; flex:0 0 54px; }
+  .al-num{ display:flex; align-items:center; gap:3px; flex:0 0 auto; }
+  .al-num input{ width:48px; border:1.5px solid var(--line); padding:5px; font-size:14px; font-family:inherit; }
+  .al-date{ display:flex; align-items:center; gap:5px; margin-left:auto; }
+  .al-date input{ border:1.5px solid var(--line); padding:5px; font-size:13px; font-family:inherit; }
+  .al-wk{ font-style:normal; font-size:12px; color:var(--muted); min-width:14px; }
   .bottombar{
     position:fixed; left:0; right:0; bottom:0; z-index:25;
     display:flex; gap:12px; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
@@ -293,8 +311,8 @@
     // 每班各自的课表（按班级名小写）；P2=周六班 / L2=周日班 / P4=周日班(国庆调到1-3号)
     var SCHED={
       "p2":[{n:1,date:"2026-09-05"},{n:2,date:"2026-09-12"},{n:3,date:"2026-09-19"},{n:4,date:"2026-09-26"},{n:5,date:"2026-10-04"},{n:6,date:"2026-10-05"},{n:7,date:"2026-10-06"},{n:8,date:"2026-10-17"}],
-      "l2":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-05"},{n:6,date:"2026-10-06"},{n:7,date:"2026-10-07"},{n:18,date:"2026-10-18"}],
-      "p4":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-01"},{n:6,date:"2026-10-02"},{n:7,date:"2026-10-03"},{n:18,date:"2026-10-18"}]
+      "l2":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-05"},{n:6,date:"2026-10-06"},{n:7,date:"2026-10-07"},{n:8,date:"2026-10-18"}],
+      "p4":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-01"},{n:6,date:"2026-10-02"},{n:7,date:"2026-10-03"},{n:8,date:"2026-10-18"}]
     };
     // 真实默认数据（localStorage 为空时启用；之后可用右上角导入更新）
     var DEFAULT_CLS=[{id:"mui56z4rfd6x3",name:"p2"},{id:"mui647cm6z7xc",name:"p4"},{id:"muji4o127puo0",name:"l2"}];
@@ -338,7 +356,7 @@
         checkin:[]         // 打卡： {id, stuId, date, text}
       },
       classTraits:[]       // 记一堂课：班级共同特点 {id, classId, lesson, date, students:[stuId], text}
-    }, activeMonth:null };
+    }, sched:{}, activeMonth:null };  // sched：自己加的课 {p2:[{n,date}], ...}
 
   function load(){
     try{
@@ -375,8 +393,58 @@
   function fmtMD(s){ var p=String(s).split("-"); if(p.length<3) return s; return (p[1].replace(/^0/,"")+"."+p[2].replace(/^0/,"")); }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
   function stuById(id){ return state.students.find(function(s){return s.id===id;}); }
-  function classSched(cid){ var c=classMap()[cid]; var nm=c?(c.name||"").toLowerCase():""; return SCHED[nm]||[]; }
+  function schedMap(nm){
+    var base=SCHED[nm]||[];
+    var extra=(state.settings.sched&&state.settings.sched[nm])||[];
+    var seen={}, out=[];
+    base.concat(extra).forEach(function(l){
+      var key=l.n+"|"+l.date;
+      if(!seen[key]){ seen[key]=true; out.push(l); }
+    });
+    return out;
+  }
+  function classSched(cid){ var c=classMap()[cid]; var nm=c?(c.name||"").toLowerCase():""; return schedMap(nm); }
   function lesById(cid,n){ var arr=classSched(cid); return arr.find(function(l){return l.n===Number(n);}); }
+  // 所有出现过的节次（基础 + 自己加的），升序去重
+  function allLessonNumbers(){
+    var allN={};
+    Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
+    var s=state.settings.sched||{};
+    Object.keys(s).forEach(function(k){ (s[k]||[]).forEach(function(l){ allN[l.n]=true; }); });
+    return Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+  }
+  // 下一节默认编号（所有班级最大 n + 1）
+  function nextLesson(){
+    var all=allLessonNumbers();
+    return (all.length?Math.max.apply(null,all):0)+1;
+  }
+  // 某班已排的最后一天（ISO）
+  function classLastDate(cid){
+    var arr=classSched(cid); if(!arr.length) return null;
+    return arr.map(function(l){return l.date;}).sort().pop();
+  }
+  // 某班下一次课的默认星期（按上次排课那天的星期推；没有排课则 P2→周六，其它→周日）
+  function classWeekday(cid){
+    var last=classLastDate(cid);
+    if(last) return new Date(last+"T00:00:00").getDay();
+    var nm=(className(cid)||"").toLowerCase();
+    return nm==="p2"?6:0;
+  }
+  // 某班下一节默认编号（该班最大 n + 1）
+  function classNextLesson(cid){
+    var arr=classSched(cid); if(!arr.length) return 1;
+    return Math.max.apply(null,arr.map(function(l){return l.n;}))+1;
+  }
+  // 在 afterISO 之后，下一个星期为 dow 的日期（dow: 0=日…6=六）
+  function nextWeekdayDate(afterISO,dow){
+    var base=afterISO?new Date(afterISO+"T00:00:00"):new Date();
+    if(isNaN(base.getTime())) base=new Date();
+    var off=(dow-base.getDay()+7)%7; if(off===0) off=7; // 严格晚于 after
+    base.setDate(base.getDate()+off);
+    return base.getFullYear()+"-"+pad(base.getMonth()+1)+"-"+pad(base.getDate());
+  }
+  var WK=["日","一","二","三","四","五","六"];
+  function weekdayName(iso){ var d=new Date(iso+"T00:00:00"); if(isNaN(d.getTime())) return ""; return WK[d.getDay()]; }
   function findTrait(cid,lesson){ return (state.settings.classTraits||[]).find(function(t){return t.classId===cid && Number(t.lesson)===Number(lesson);}); }
   function findTraitById(id){ return (state.settings.classTraits||[]).find(function(t){return t.id===id;}); }
   function studentsOfClass(cid){ return state.students.filter(function(s){return s.classId===cid;}).map(function(s){return s.id;}); }
@@ -427,6 +495,8 @@
     function months(){
       var set={};
       Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ set[l.date.slice(0,7)]=true; }); });
+      var s=state.settings.sched||{};
+      Object.keys(s).forEach(function(k){ (s[k]||[]).forEach(function(l){ if(l&&l.date) set[l.date.slice(0,7)]=true; }); });
       return Object.keys(set).sort();
     }
   function cnMonth(ym){ var p=ym.split("-"); return Number(p[1])+"月"; }
@@ -449,9 +519,11 @@
     mh.innerHTML='<button class="marr'+(prevM?"":" dis")+'" data-action="switch-month" data-m="'+prevM+'">‹</button>'+
       '<span class="mcur">'+cnMonth(state.activeMonth)+'</span>'+
       '<button class="marr'+(nextM?"":" dis")+'" data-action="switch-month" data-m="'+nextM+'">›</button>';
-    // 当月可见节次（所有班级去重排序）
+    // 当月可见节次（所有班级去重排序，含自己加的）
     var visN={};
     Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ if(l.date.slice(0,7)===state.activeMonth) visN[l.n]=true; }); });
+    var s0=state.settings.sched||{};
+    Object.keys(s0).forEach(function(k){ (s0[k]||[]).forEach(function(l){ if(l&&l.date&&l.date.slice(0,7)===state.activeMonth) visN[l.n]=true; }); });
     var visLessons=Object.keys(visN).map(Number).sort(function(a,b){return a-b;});
     if(!state.students.length){
       document.getElementById("tbl").innerHTML='<div style="padding:40px 16px;text-align:center;color:var(--muted);">还没有学生。点右上角 ⚙ 设置 → 导入 JSON，把学生加进来。</div>';
@@ -506,6 +578,7 @@
         '<textarea class="pnote-area" data-pn="'+key+'" placeholder="写点班级进度…">'+esc(val)+'</textarea>'+
         '</div>';
     });
+    html+='<div class="add-lesson-wrap"><button class="add-lesson-btn" data-action="add-lesson">＋ 加课（一次可加多个班）</button></div>';
     document.getElementById("tbl").innerHTML=html;
   }
   function renderPerson(){
@@ -656,8 +729,7 @@
     if(isFree) optHtml='<option value="">— 不指定学生 —</option>'+optHtml;
     html+='<div class="field"><label>学生</label><select id="p-stu">'+optHtml+'</select></div>';
     if(mod==="lesson"){
-      var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
-      var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+      var less=allLessonNumbers();
       var defLes=rec?rec.lesson:"";
       html+='<div class="field"><label>第几节</label><select id="p-les">'+less.map(function(n){return '<option value="'+n+'"'+(Number(defLes)===n?" selected":"")+'>L'+n+'</option>';}).join("")+'</select></div>';
     } else {
@@ -672,8 +744,7 @@
     openModal(html);
   }
   function openLessonCapture(){
-    var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
-    var less=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+    var less=allLessonNumbers();
     var html='<div class="sheet-head"><span class="sheet-ico lesson"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg></span><div><h3>记一堂课</h3></div></div>'+
       '<div class="field"><label>班级</label><div class="chips" id="lc-pick">'+state.classes.map(function(c){return '<span class="chip" data-lp="'+c.id+'">'+esc(className(c.id))+' 班</span>';}).join("")+'</div></div>'+
       '<div class="field"><label>第几节</label><div class="chips" id="lc-less">'+less.map(function(n){return '<span class="chip" data-ll="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
@@ -681,6 +752,41 @@
       '<div class="field"><label>共同特点</label><textarea id="lc-text" rows="4" placeholder="整体活跃，拼读普遍偏弱…"></textarea></div>'+
       '<div class="rc-btns"><button class="rc-makeup" data-act="lc-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
     openModal(html);
+  }
+  function openAddLesson(){
+    var rows=state.classes.map(function(c){
+      var cid=c.id;
+      var n=classNextLesson(cid);
+      var dt=nextWeekdayDate(classLastDate(cid), classWeekday(cid));
+      var on=" on"; // 默认全勾（经常几个班一起加）
+      return '<div class="al-row" data-cls="'+cid+'">'+
+        '<span class="al-check'+on+'" data-act="al-toggle" data-cls="'+cid+'">✓</span>'+
+        '<span class="al-name">'+esc(className(cid))+' 班</span>'+
+        '<span class="al-num"><input type="number" class="al-les" data-cls="'+cid+'" min="1" value="'+n+'">节</span>'+
+        '<span class="al-date"><input type="date" class="al-dt" data-cls="'+cid+'" value="'+dt+'"><i class="al-wk" id="alwk-'+cid+'">'+weekdayName(dt)+'</i></span>'+
+      '</div>';
+    }).join("");
+    var added=[];
+    var s=state.settings.sched||{};
+    Object.keys(s).forEach(function(nm){
+      (s[nm]||[]).forEach(function(l){
+        added.push('<div class="al-item"><span>'+esc(nm.toUpperCase())+' 班 · 第'+l.n+'节 · '+l.date+'</span>'+
+          '<button class="al-del" data-act="al-del" data-cls="'+nm+'" data-n="'+l.n+'" data-date="'+l.date+'">×</button></div>');
+      });
+    });
+    var html='<h3>加课（一次可加多个班）</h3>'+
+      '<div class="sub">勾选要加的班，日期已按各班平时的星期自动算好（P2 算周六、L2/P4 算周日），节数自动顺延。节假日错位就改一下日期。</div>'+
+      '<div class="al-rows">'+rows+'</div>'+
+      (added.length?'<div class="al-list"><div class="al-list-h">已自己加的课（点 × 可删）</div>'+added.join("")+'</div>':'')+
+      '<div class="rc-btns"><button class="rc-makeup" data-act="al-save">保存</button><button class="rc-clear" data-act="close-modal">取消</button></div>';
+    openModal(html);
+    var box=document.getElementById("sheet");
+    if(box) box.querySelectorAll(".al-dt").forEach(function(inp){
+      inp.addEventListener("input",function(){
+        var wk=document.getElementById("alwk-"+inp.dataset.cls);
+        if(wk) wk.textContent=weekdayName(inp.value);
+      });
+    });
   }
   function renderLessonStudents(cid){
     var box=document.getElementById("lc-students"); if(!box) return;
@@ -734,8 +840,7 @@
   }
 
   function openQuick(){
-    var allN={}; Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ allN[l.n]=true; }); });
-    var qkLessons=Object.keys(allN).map(Number).sort(function(a,b){return a-b;});
+    var qkLessons=allLessonNumbers();
     var html='<div class="sheet-head"><span class="sheet-ico idea"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2Z"/></svg></span><div><h3>写一笔</h3></div></div>'+
       '<div class="field"><label>学生</label><div class="chips" id="qk-pick">'+state.students.map(function(s){return '<span class="chip" data-pick="'+s.id+'">'+esc(s.name)+'</span>';}).join("")+'</div></div>'+
       '<div class="field"><label>第几节</label><div class="chips" id="qk-less">'+qkLessons.map(function(n){return '<span class="chip" data-less="'+n+'">L'+n+'</span>';}).join("")+'</div></div>'+
@@ -846,13 +951,15 @@
     }
     if(legacyLesson.length) state.settings.person.lesson=(state.settings.person.lesson||[]).concat(legacyLesson);
     // 顺手把其它用户数据也吸收（避免导出再导入丢内容）
+    if(d.lessonNotes&&typeof d.lessonNotes==="object") state.settings.lessonNotes=d.lessonNotes;
+    if(d.progressNotes&&typeof d.progressNotes==="object") state.settings.progressNotes=d.progressNotes;
+    if(d.sched&&typeof d.sched==="object") state.settings.sched=d.sched;
     if(d.settings){
       if(d.settings.lessonNotes&&typeof d.settings.lessonNotes==="object") state.settings.lessonNotes=d.settings.lessonNotes;
       if(d.settings.progressNotes&&typeof d.settings.progressNotes==="object") state.settings.progressNotes=d.settings.progressNotes;
       if(d.settings.theme) state.settings.theme=d.settings.theme;
+      if(d.settings.sched&&typeof d.settings.sched==="object") state.settings.sched=d.settings.sched;
     }
-    if(d.lessonNotes&&typeof d.lessonNotes==="object") state.settings.lessonNotes=d.lessonNotes;
-    if(d.progressNotes&&typeof d.progressNotes==="object") state.settings.progressNotes=d.progressNotes;
     save(); render(); closeModal(); closePop();
     toast("导入成功（上课/家长/打卡已保留）");
   }
@@ -863,6 +970,7 @@
       lessonNotes:state.settings.lessonNotes||{},
       classTraits:state.settings.classTraits||[],
       progressNotes:state.settings.progressNotes||{},
+      sched:state.settings.sched||{},
       theme:state.settings.theme||"navy"
     },null,2)],{type:"application/json"});
     var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="student-records.json"; a.click();
@@ -910,7 +1018,8 @@
       students:state.students, classes:state.classes, records:state.records,
       person:state.settings.person||{lesson:[],parent:[],checkin:[]},
       lessonNotes:state.settings.lessonNotes||{}, classTraits:state.settings.classTraits||[],
-      progressNotes:state.settings.progressNotes||{}, theme:state.settings.theme||"navy"
+      progressNotes:state.settings.progressNotes||{}, sched:state.settings.sched||{},
+      theme:state.settings.theme||"navy"
     },null,2);
   }
   function searchAndWrite(token,payload){
@@ -973,6 +1082,7 @@
       else if(a==="switch-sub"){ state.subtab=el.dataset.sub; render(); }
       else if(a==="open-quick"){ openQuick(); }
       else if(a==="open-lesson"){ openLessonCapture(); }
+      else if(a==="add-lesson"){ openAddLesson(); }
       else if(a==="penter"){ state.pstu=el.dataset.stu; render(); }
       else if(a==="pback"){ state.pstu=null; render(); }
       else if(a==="padd"){ openPersonEdit(el.dataset.mod, null, el.dataset.stu); }
@@ -1058,6 +1168,39 @@
       else if(act==="set-export"){ doExport(); }
       else if(act==="set-recycle"){ toast("回收站（后续做）"); }
       else if(act==="set-sync"){ openSync(); }
+      else if(act==="al-save"){
+        var s=state.settings.sched||{};
+        var added=0, monthsToShow=[];
+        document.querySelectorAll(".al-row").forEach(function(row){
+          var cid=row.dataset.cls;
+          var chk=row.querySelector(".al-check");
+          if(!chk||!chk.classList.contains("on")) return;
+          var n=Number(row.querySelector(".al-les").value);
+          var dt=row.querySelector(".al-dt").value;
+          if(!n||!dt) return;
+          var nm=(className(cid)||"").toLowerCase();
+          if(!s[nm]) s[nm]=[];
+          var dup=s[nm].some(function(l){return l.n===n && l.date===dt;});
+          if(!dup){ s[nm].push({n:n,date:dt}); added++; monthsToShow.push(dt.slice(0,7)); }
+        });
+        if(!added){ toast("先勾选要加的班，并填好日期"); return; }
+        state.settings.sched=s;
+        if(monthsToShow.length){ monthsToShow.sort(); state.activeMonth=monthsToShow[monthsToShow.length-1]; }
+        save(); render(); closeModal();
+        toast("已加 "+added+" 个班，已跳到该月份 ✦");
+      }
+      else if(act==="al-toggle"){
+        var t=document.querySelector('.al-check[data-cls="'+el.dataset.cls+'"]');
+        if(t) t.classList.toggle("on");
+      }
+      else if(act==="al-del"){
+        var dn=el.dataset.cls, dnn=Number(el.dataset.n), dnd=el.dataset.date;
+        if(state.settings.sched&&state.settings.sched[dn]){
+          state.settings.sched[dn]=state.settings.sched[dn].filter(function(l){return !(l.n===dnn && l.date===dnd);});
+          save();
+        }
+        openAddLesson();
+      }
       else if(act==="set-close"){ closePop(); }
       else if(act==="close-modal"){ closeModal(); }
       return;
