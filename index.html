@@ -307,49 +307,18 @@
 <script>
   (function(){
     "use strict";
-    var KEY_STU="sr_students_v2", KEY_REC="sr_records_v2", KEY_SET="sr_settings_v2";
+    var KEY_STU="sr_students_v2", KEY_REC="sr_records_v2", KEY_SET="sr_settings_v2", KEY_CLS="sr_classes_v2";
     // 每班各自的课表（按班级名小写）；P2=周六班 / L2=周日班 / P4=周日班(国庆调到1-3号)
     var SCHED={
       "p2":[{n:1,date:"2026-09-05"},{n:2,date:"2026-09-12"},{n:3,date:"2026-09-19"},{n:4,date:"2026-09-26"},{n:5,date:"2026-10-04"},{n:6,date:"2026-10-05"},{n:7,date:"2026-10-06"},{n:8,date:"2026-10-17"},{n:9,date:"2026-10-24"},{n:10,date:"2026-10-31"}],
       "l2":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-05"},{n:6,date:"2026-10-06"},{n:7,date:"2026-10-07"},{n:8,date:"2026-10-18"},{n:9,date:"2026-10-25"},{n:10,date:"2026-11-01"}],
       "p4":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-01"},{n:6,date:"2026-10-02"},{n:7,date:"2026-10-03"},{n:8,date:"2026-10-18"},{n:9,date:"2026-10-25"},{n:10,date:"2026-11-01"}]
     };
-    // 真实默认数据（localStorage 为空时启用；之后可用右上角导入更新）
-    var DEFAULT_CLS=[{id:"mui56z4rfd6x3",name:"p2"},{id:"mui647cm6z7xc",name:"p4"},{id:"muji4o127puo0",name:"l2"}];
-    var DEFAULT_STU=[
-      {id:"mui5amxt6b271",name:"王琰玘",classId:"mui56z4rfd6x3"},
-      {id:"mui69ry8inj7k",name:"李明昊",classId:"mui647cm6z7xc"},
-      {id:"mui73c51chrs0",name:"刘宇涵",classId:"mui647cm6z7xc"},
-      {id:"muji4w9yjj5qj",name:"黄奕安",classId:"muji4o127puo0"},
-      {id:"muji4w9yc9uu2",name:"梁汝欢",classId:"muji4o127puo0"},
-      {id:"mujj6bmkstc4h",name:"林颂渊",classId:"mui647cm6z7xc"},
-      {id:"mujm0g2ttftny",name:"任妍语",classId:"mui647cm6z7xc"}
-    ];
-    var DEFAULT_REC=[
-      // P2 王琰玘
-      {studentId:"mui5amxt6b271",lesson:7,leave:true,makeupDate:null,note:"复习A和E"},
-      // L2 黄奕安
-      {studentId:"muji4w9yjj5qj",lesson:3,leave:true,makeupDate:null},
-      {studentId:"muji4w9yjj5qj",lesson:4,leave:true,makeupDate:null},
-      // L2 梁汝欢（仅在 9.25 / 9.27 / 10.5 / 10.6 画红叉）
-      {studentId:"muji4w9yc9uu2",lesson:3,leave:true,makeupDate:null},
-      {studentId:"muji4w9yc9uu2",lesson:4,leave:true,makeupDate:null},
-      {studentId:"muji4w9yc9uu2",lesson:5,leave:true,makeupDate:null},
-      {studentId:"muji4w9yc9uu2",lesson:6,leave:true,makeupDate:null},
-      // P4 保留原有真实记录
-      {studentId:"mui69ry8inj7k",lesson:1,leave:true,makeupDate:"2026-09-25"},
-      {studentId:"mui69ry8inj7k",lesson:2,leave:true,makeupDate:null},
-      {studentId:"mui69ry8inj7k",lesson:7,leave:true,makeupDate:null},
-      {studentId:"mujj6bmkstc4h",lesson:5,leave:true,makeupDate:null},
-      {studentId:"mujj6bmkstc4h",lesson:6,leave:true,makeupDate:null},
-      {studentId:"mui73c51chrs0",lesson:7,leave:true,makeupDate:null}
-    ];
+    // 默认数据为空：首次打开是干净的空白，请用「设置 → 导入」把你的数据放进来（或手动添加）。
     var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", pstu:null, search:"", settings:{
       theme:"navy",
       lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
-      progressNotes:{      // 每班进度备注（可自己改）
-        l2:"L2班整体进度较其他班慢2节课（缺9.25、9.27内容）。安安缺2节，进度正好；欢欢额外缺10.5、10.6，共缺4节，比安安多落后2节。"
-      },
+      progressNotes:{},    // 每班进度备注（可自己改）
       person:{             // 个人情况三模块（record-first，只显示写过的）
         lesson:[],         // 上课： {id, stuId, lesson, date, text, idea?}
         parent:[],         // 家长： {id, stuId, date, text}
@@ -362,6 +331,7 @@
     try{
       var s=JSON.parse(localStorage.getItem(KEY_STU)); if(Array.isArray(s)) state.students=s;
       var r=JSON.parse(localStorage.getItem(KEY_REC)); if(Array.isArray(r)) state.records=r;
+      var c=JSON.parse(localStorage.getItem(KEY_CLS)); if(Array.isArray(c)) state.classes=c;
       var t=JSON.parse(localStorage.getItem(KEY_SET)); if(t&&typeof t==="object") state.settings=Object.assign(state.settings,t);
     }catch(e){}
   }
@@ -385,6 +355,7 @@
     try{
       localStorage.setItem(KEY_STU,JSON.stringify(state.students));
       localStorage.setItem(KEY_REC,JSON.stringify(state.records));
+      localStorage.setItem(KEY_CLS,JSON.stringify(state.classes));
       localStorage.setItem(KEY_SET,JSON.stringify(state.settings));
     }catch(e){}
   }
@@ -463,35 +434,6 @@
       return prefIds.concat(rest);
     }
     function className(id){ var c=classMap()[id]; return c?(c.name||"").toUpperCase():"?"; }
-    function seedDefault(){
-      state.students=DEFAULT_STU.slice();
-      state.classes=DEFAULT_CLS.slice();
-      state.records=DEFAULT_REC.slice();
-    }
-    // 个人情况三模块为空时，填一批示例数据方便参考（只填这三个，不动出勤/学生；一旦有真实数据就不再填）
-    function seedPersonDemo(){
-      var p=state.settings.person;
-      if(!p) return;
-      if(p.lesson.length || p.parent.length || p.checkin.length) return;
-      function L(stuId,lesson,date,text){ p.lesson.push({id:genId(),stuId:stuId,lesson:lesson,date:date,text:text}); }
-      function P(stuId,date,text){ p.parent.push({id:genId(),stuId:stuId,date:date,text:text}); }
-      function C(stuId,date,text){ p.checkin.push({id:genId(),stuId:stuId,date:date,text:text}); }
-      // 上课
-      L("mui5amxt6b271",1,"2026-09-05","第一节课，基础音还行，但连读偏弱，后面多练。");
-      L("mui69ry8inj7k",1,"2026-09-06","开口积极，单词拼读准确率提高，节奏稳了。");
-      L("muji4w9yjj5qj",3,"2026-09-25","注意力容易飘，需多次提醒；元音发音有进步。");
-      L("muji4w9yc9uu2",2,"2026-09-13","跟读很认真，但自主拼读慢，回家要加练。");
-      L("mujj6bmkstc4h",5,"2026-10-01","整节课状态好，长句能完整读下来。");
-      // 家长
-      P("mui69ry8inj7k","2026-09-08","妈妈反馈在家愿意开口读了，作业完成度提升。");
-      P("muji4w9yjj5qj","2026-09-26","爸爸说孩子喜欢上课，希望多鼓励表达。");
-      P("mui5amxt6b271","2026-10-07","妈妈问国庆后能否加一节，已记录待排。");
-      // 打卡
-      C("mui73c51chrs0","2026-09-10","完成打卡：每日跟读15分钟。");
-      C("mujm0g2ttftny","2026-09-12","完成打卡：拼读练习2页。");
-      C("mujj6bmkstc4h","2026-09-15","完成打卡：录音作业已提交。");
-      save();
-    }
     function months(){
       var set={};
       Object.keys(SCHED).forEach(function(k){ SCHED[k].forEach(function(l){ set[l.date.slice(0,7)]=true; }); });
@@ -1228,9 +1170,7 @@
   function curCell(){ if(!_cur) return null; return _cur; }
 
     load();
-    if(!state.students.length) seedDefault();
     migrateSettings();
-    seedPersonDemo();
     render();
 })();
 </script>
