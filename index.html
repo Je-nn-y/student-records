@@ -314,13 +314,58 @@
       "l2":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-05"},{n:6,date:"2026-10-06"},{n:7,date:"2026-10-07"},{n:8,date:"2026-10-18"},{n:9,date:"2026-10-25"},{n:10,date:"2026-11-01"}],
       "p4":[{n:1,date:"2026-09-06"},{n:2,date:"2026-09-13"},{n:3,date:"2026-09-25"},{n:4,date:"2026-09-27"},{n:5,date:"2026-10-01"},{n:6,date:"2026-10-02"},{n:7,date:"2026-10-03"},{n:8,date:"2026-10-18"},{n:9,date:"2026-10-25"},{n:10,date:"2026-11-01"}]
     };
-    // 默认数据为空：首次打开是干净的空白，请用「设置 → 导入」把你的数据放进来（或手动添加）。
-    var state={ students:[], classes:[], records:[], view:"attend", subtab:"lesson", pstu:null, search:"", settings:{
+    // 整理好的初始数据（从你旧软件迁移过来的真实记录）。首次打开直接用；也可用「设置 → 把记录装进 App」恢复。
+    var DEFAULT_DATA={
+      students:[
+        {id:"mui5amxt6b271",name:"王琰玘",classId:"mui56z4rfd6x3"},
+        {id:"mui69ry8inj7k",name:"李明昊",classId:"mui647cm6z7xc"},
+        {id:"mui73c51chrs0",name:"刘宇涵",classId:"mui647cm6z7xc"},
+        {id:"muji4w9yjj5qj",name:"黄奕安",classId:"muji4o127puo0"},
+        {id:"muji4w9yc9uu2",name:"梁汝欢",classId:"muji4o127puo0"},
+        {id:"mujj6bmkstc4h",name:"林颂渊",classId:"mui647cm6z7xc"},
+        {id:"mujm0g2ttftny",name:"任妍语",classId:"mui647cm6z7xc"}
+      ],
+      classes:[
+        {id:"mui56z4rfd6x3",name:"p2"},
+        {id:"mui647cm6z7xc",name:"p4"},
+        {id:"muji4o127puo0",name:"l2"}
+      ],
+      records:[
+        {studentId:"muji4w9yc9uu2",lesson:2,makeupDate:"2026-09-27",note:"上课比较认真，后期有点走神。第一节课的知识有点遗忘，提醒之后能想起来went e 的发音容易弄错。上课积极参与讨论。 Shouted television table.听写也写不出来，其他的还可以写出来。"},
+        {studentId:"muji4w9yc9uu2",lesson:3,makeupDate:null,note:null},
+        {studentId:"muji4w9yc9uu2",lesson:4,makeupDate:null,note:null},
+        {studentId:"muji4w9yjj5qj",lesson:4,makeupDate:null,note:null},
+        {studentId:"mui69ry8inj7k",lesson:1,makeupDate:"2026-09-25",note:null},
+        {studentId:"mui69ry8inj7k",lesson:2,makeupDate:null,note:null},
+        {studentId:"muji4w9yjj5qj",lesson:3,makeupDate:null,note:null},
+        {studentId:"mujj6bmkstc4h",lesson:5,makeupDate:null,note:null},
+        {studentId:"mujm0g2ttftny",lesson:5,makeupDate:null,note:null},
+        {studentId:"mujm0g2ttftny",lesson:6,makeupDate:null,note:null},
+        {studentId:"mujm0g2ttftny",lesson:7,makeupDate:null,note:null},
+        {studentId:"mujj6bmkstc4h",lesson:6,makeupDate:null,note:null},
+        {studentId:"mujj6bmkstc4h",lesson:6,makeupDate:null,note:null},
+        {studentId:"mui73c51chrs0",lesson:7,makeupDate:null,note:null},
+        {studentId:"mui69ry8inj7k",lesson:7,makeupDate:null,note:null}
+      ],
+      personLesson:[
+        {id:"mui5blx1d0n82",stuId:"mui5amxt6b271",lesson:4,date:"2026-09-26",text:"短音e，学的快。字母ejquvwxy发音要巩固，尤其是v。pencil听写较难。smell学得快。值得表扬。活泼松散，下节课要严格。筛筛子达到70分",idea:false},
+        {id:"mujnfwc2zg2xp",stuId:"mui69ry8inj7k",lesson:4,date:"2026-09-27",text:"stspsc 不会，不打卡前面不会读，还急哭了",idea:false},
+        {id:"mujngfvgnil4e",stuId:"mujm0g2ttftny",lesson:4,date:"2026-09-27",text:"习题第一",idea:false},
+        {id:"mujngri5ztfdp",stuId:"mui73c51chrs0",lesson:4,date:"2026-09-27",text:"爱走神",idea:false},
+        {id:"muq9r767jbbpl",stuId:"mui73c51chrs0",lesson:5,date:"2026-10-01",text:"复习 r 家族，ore 是组合易忘，fire 误认为组合。上课积极开心",idea:false},
+        {id:"muq9r767u3h7f",stuId:"mui69ry8inj7k",lesson:5,date:"2026-10-01",text:"复习 r 家族，ore 是组合易忘，fire 误认为组合。上课积极开心",idea:false},
+        {id:"muq9u46gu686n",stuId:"mui69ry8inj7k",lesson:5,date:"2026-10-01",text:"与上节课反差明显，上得很开心，蹦蹦跳跳，还想来上。",idea:false},
+        {id:"mur345ontklhf",stuId:"mui69ry8inj7k",lesson:6,date:"2026-10-02",text:"oi，oy，积极",idea:false},
+        {id:"mur345onoii2u",stuId:"mui73c51chrs0",lesson:6,date:"2026-10-02",text:"oi，oy，积极",idea:false}
+      ]
+    };
+    function clone(o){ try{ return JSON.parse(JSON.stringify(o)); }catch(e){ return Array.isArray(o)?[]:{}; } }
+    var state={ students:clone(DEFAULT_DATA.students), classes:clone(DEFAULT_DATA.classes), records:clone(DEFAULT_DATA.records), view:"attend", subtab:"lesson", pstu:null, search:"", settings:{
       theme:"navy",
       lessonNotes:{},      // 每节课上的内容： "p2|5" => "复习A和E"
       progressNotes:{},    // 每班进度备注（可自己改）
       person:{             // 个人情况三模块（record-first，只显示写过的）
-        lesson:[],         // 上课： {id, stuId, lesson, date, text, idea?}
+        lesson:clone(DEFAULT_DATA.personLesson),
         parent:[],         // 家长： {id, stuId, date, text}
         checkin:[]         // 打卡： {id, stuId, date, text}
       },
@@ -806,6 +851,7 @@
   function openSettings(){
     var html='<h4 style="margin:0 0 6px;">设置</h4>'+
       '<div class="menu-row" data-act="set-import"><span>导入 JSON</span><span>›</span></div>'+
+      '<div class="menu-row" data-act="load-initial"><span>把记录装进 App</span><span>›</span></div>'+
       '<div class="menu-row" data-act="set-export"><span>导出备份</span><span>›</span></div>'+
       '<div class="menu-row" data-act="set-recycle"><span>回收站</span><span>›</span></div>'+
       '<div class="menu-row" data-act="set-sync"><span>同步</span><span>›</span></div>'+
@@ -815,6 +861,15 @@
     document.getElementById("popMask").classList.remove("hidden");
   }
   function closePop(){ document.getElementById("popMask").classList.add("hidden"); }
+  // 把整理好的初始记录装进 App（覆盖当前的 学生/班级/出勤/上课笔记；保留你手动加的备注/特点/打卡等其它内容）
+  function loadInitial(){
+    if(!window.confirm("这会用整理好的记录，替换掉 App 里现在的「学生 / 班级 / 出勤 / 上课笔记」这几项。\n确定要装进去吗？")) return;
+    state.students=clone(DEFAULT_DATA.students);
+    state.classes=clone(DEFAULT_DATA.classes);
+    state.records=clone(DEFAULT_DATA.records);
+    state.settings.person.lesson=clone(DEFAULT_DATA.personLesson);
+    save(); render(); closePop(); closeModal(); toast("已把整理好的记录装进 App ✦");
+  }
 
   function openImport(){
     closePop(); // 先关掉设置面板，否则它的遮罩会盖住导入弹窗、导致取消键点不到
@@ -1105,6 +1160,7 @@
         save(); state.view="person"; state.subtab="lesson"; state.pstu=stuId; render(); closeModal(); toast("已记下想法 ✦");
       }
       else if(act==="set-import"){ openImport(); }
+      else if(act==="load-initial"){ loadInitial(); }
       else if(act==="sync-up"){ uploadSync(); }
       else if(act==="sync-down"){ downloadSync(); }
       else if(act==="set-export"){ doExport(); }
